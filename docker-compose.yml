@@ -1,0 +1,21 @@
+# DVAP lab. Everything is simulated and stays on the internal network.
+# Only the HMI, scoreboard and guard dashboard may publish ports, and only on 127.0.0.1.
+
+services:
+  plant-sim:
+    build:
+      context: .
+      dockerfile: services/plant-sim/Dockerfile
+    environment:
+      PLANT_SEED: ${PLANT_SEED:-0}
+      PLANT_NOISE: ${PLANT_NOISE:-0}
+    networks: [plant]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+networks:
+  plant:
+    internal: true # no route to the host or the internet

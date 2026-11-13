@@ -1,0 +1,34 @@
+# Plant model constants. Used by plant-sim and by forecast() (SafeEnvelope later).
+# Override the file path with the DVAP_PLANT_CONFIG env var.
+
+tick_hz: 10
+
+# Hydraulics
+tank_volume_l: 10000
+inflow_nominal_lps: 20        # inflow when the pump is on
+drain_max_lps: 40             # outflow with valve 100% and a full tank
+
+# Chlorine (ppm == mg/L)
+dose_mg_per_s_per_unit: 10    # chlorine_pump_rate 0-10 -> 0-100 mg/s
+chlorine_decay_per_s: 0.0005
+min_mix_volume_l: 100         # floor for the mixing volume, avoids divide-by-zero in an empty tank
+
+# Incident thresholds
+overdose_ppm: 4.0
+overdose_sustain_s: 10
+underdose_ppm: 0.2
+underdose_sustain_s: 30
+dry_run_level_pct: 2
+
+# Sensor noise (standard deviation), only applied when noise is enabled
+noise_level_pct: 0.1
+noise_ppm: 0.02
+noise_flow_lps: 0.2
+
+# Roughly steady state: inflow 20 L/s == outflow, ~1.4 ppm
+initial:
+  tank_level_pct: 50
+  inflow_pump_on: true
+  drain_valve_pct: 70.7
+  chlorine_pump_rate: 3
+  chlorine_ppm: 1.4

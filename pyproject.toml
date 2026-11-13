@@ -1,0 +1,25 @@
+[project]
+name = "dvap"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.162.7",
+    "pydantic>=2",
+    "pyyaml>=6.0.3",
+    "uvicorn>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.2.0",
+    "ruff>=0.17.5",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "services/plant-sim"]
+
+[tool.ruff]
+line-length = 110
+src = [".", "services/plant-sim"]
