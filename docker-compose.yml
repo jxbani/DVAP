@@ -16,6 +16,23 @@ services:
       timeout: 3s
       retries: 5
 
+  plc:
+    build:
+      context: .
+      dockerfile: services/plc/Dockerfile
+    environment:
+      PLANT_URL: http://plant-sim:8000
+      PLC_DIFFICULTY: ${PLC_DIFFICULTY:-easy} # easy | medium | hard
+    depends_on:
+      plant-sim:
+        condition: service_healthy
+    networks: [plant]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
 networks:
   plant:
     internal: true # no route to the host or the internet

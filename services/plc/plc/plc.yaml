@@ -1,0 +1,36 @@
+# Virtual PLC configuration.
+
+scan_hz: 10
+
+# Which safety interlocks are enabled at each difficulty level (PLC_DIFFICULTY env var).
+# Each interlock can be switched individually.
+difficulty:
+  easy: { level_hh: false, chlorine_hh: false, dry_run: false }
+  medium: { level_hh: true, chlorine_hh: false, dry_run: true }
+  hard: { level_hh: true, chlorine_hh: true, dry_run: true } # bypassable, see DVAP-VULN C03
+
+# Interlock thresholds: trip at `trip`, release again at `reset`.
+interlocks:
+  level_hh: { trip: 90, reset: 85 }        # tank level %, stops the inflow pump
+  chlorine_hh: { trip: 3.5, reset: 3.0 }   # ppm, stops the dosing pump
+  dry_run: { trip: 5, reset: 8 }           # tank level %, closes the drain valve so the tank cannot run empty
+
+# AUTO mode PI loops.
+control:
+  level: { kp: 10, ki: 0.05 }      # output: drain valve %, opens when level is above setpoint
+  chlorine: { kp: 5, ki: 0.02 }    # output: dosing pump rate 0-10
+
+# Power-on values of the writable tags.
+defaults:
+  auto_mode: true
+  inflow_pump_cmd: true
+  drain_valve_cmd: true
+  chlorine_pump_cmd: true
+  level_setpoint: 50
+  chlorine_setpoint: 1.5
+  valve_pct: 70.7
+  chlorine_rate: 3
+  maintenance_mode: 0
+  device_tag: "WTP-01 TANK T-101"
+  alarm_message: ""
+  operator_note: ""

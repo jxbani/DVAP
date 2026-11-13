@@ -3,8 +3,11 @@ name = "dvap"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+    "asyncua>=2.1.0",
     "fastapi>=0.162.7",
+    "httpx>=0.28.1",
     "pydantic>=2",
+    "pymodbus>=3,<4",
     "pyyaml>=6.0.3",
     "uvicorn>=0.54.0",
 ]
@@ -13,13 +16,16 @@ dependencies = [
 dev = [
     "httpx>=0.28.1",
     "pytest>=9.2.0",
+    "pytest-asyncio>=1.5.0",
     "ruff>=0.17.5",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = [".", "services/plant-sim"]
+pythonpath = [".", "services/plant-sim", "services/plc"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
 line-length = 110
-src = [".", "services/plant-sim"]
+src = [".", "services/plant-sim", "services/plc"]
