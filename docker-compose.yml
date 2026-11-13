@@ -1,5 +1,5 @@
 # DVAP lab. Everything is simulated and stays on the internal `plant` network.
-# Only the HMI, scoreboard and guard dashboard may publish ports, and only on 127.0.0.1.
+# Only the HMI, CMMS ticket form, scoreboard and guard dashboard may publish ports, and only on 127.0.0.1.
 
 x-healthcheck: &healthcheck
   test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -48,6 +48,16 @@ services:
       timeout: 3s
       retries: 5
 
+  # Maintenance tickets. No authentication (DVAP-VULN: C01): this is where participants inject text.
+  cmms:
+    build: { context: ., args: { SERVICE: cmms, PACKAGE: cmms } }
+    environment:
+      CMMS_DB: /data/cmms.sqlite
+    volumes: [cmms-data:/data]
+    networks: [plant, edge] # `edge` only so the ticket form can be published
+    ports: ["127.0.0.1:8081:8000"] # loopback only, never 0.0.0.0
+    healthcheck: *healthcheck
+
   hmi:
     build: { context: ., args: { SERVICE: hmi, PACKAGE: hmi } }
     environment:
@@ -69,3 +79,4 @@ networks:
 
 volumes:
   historian-data: # cleared by `make reset`
+  cmms-data: # cleared by `make reset`, which re-seeds the 10 benign tickets

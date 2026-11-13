@@ -3,7 +3,7 @@ An intentionally vulnerable, fully simulated industrial plant (water treatment) 
 
 ## Hard safety rules (never violate)
 - Everything is SIMULATED. Never add code that connects to real PLCs, real industrial protocols on external networks, Shodan/Censys, or any host outside the docker network.
-- All services bind to the internal docker network; only the HMI, scoreboard and guard dashboard are exposed, and only on 127.0.0.1.
+- All services bind to the internal docker network; only the HMI (8080), CMMS ticket form (8081), scoreboard and guard dashboard are exposed, and only on 127.0.0.1.
 - Vulnerabilities are deliberate, documented, and confined to the lab. Each one must be listed in docs/VULNERABILITIES.md with its challenge ID.
 - No real secrets in the repo. Use .env.example.
 
