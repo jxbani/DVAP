@@ -1,38 +1,71 @@
-# DVAP lab. Everything is simulated and stays on the internal network.
+# DVAP lab. Everything is simulated and stays on the internal `plant` network.
 # Only the HMI, scoreboard and guard dashboard may publish ports, and only on 127.0.0.1.
+
+x-healthcheck: &healthcheck
+  test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+  interval: 5s
+  timeout: 3s
+  retries: 5
 
 services:
   plant-sim:
-    build:
-      context: .
-      dockerfile: services/plant-sim/Dockerfile
+    build: { context: ., args: { SERVICE: plant-sim, PACKAGE: plant_sim } }
     environment:
       PLANT_SEED: ${PLANT_SEED:-0}
       PLANT_NOISE: ${PLANT_NOISE:-0}
     networks: [plant]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+    healthcheck: *healthcheck
 
   plc:
-    build:
-      context: .
-      dockerfile: services/plc/Dockerfile
+    build: { context: ., args: { SERVICE: plc, PACKAGE: plc, MODULE: main } }
     environment:
       PLANT_URL: http://plant-sim:8000
       PLC_DIFFICULTY: ${PLC_DIFFICULTY:-easy} # easy | medium | hard
     depends_on:
-      plant-sim:
-        condition: service_healthy
+      plant-sim: { condition: service_healthy }
+    networks: [plant]
+    healthcheck: *healthcheck
+
+  historian:
+    build: { context: ., args: { SERVICE: historian, PACKAGE: historian } }
+    environment:
+      PLC_HOST: plc
+      HISTORIAN_DB: /data/historian.sqlite
+    volumes: [historian-data:/data]
+    depends_on:
+      plc: { condition: service_healthy }
+    networks: [plant]
+    healthcheck: *healthcheck
+
+  # Inter-agent message bus. No password: deliberate, used by later challenges.
+  bus:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
     networks: [plant]
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
 
+  hmi:
+    build: { context: ., args: { SERVICE: hmi, PACKAGE: hmi } }
+    environment:
+      PLANT_URL: http://plant-sim:8000
+      HISTORIAN_URL: http://historian:8000
+      REDIS_URL: redis://bus:6379
+    depends_on:
+      historian: { condition: service_healthy }
+      bus: { condition: service_healthy }
+    # `plant` to reach the lab, `edge` only so the port below can be published.
+    networks: [plant, edge]
+    ports: ["127.0.0.1:8080:8000"] # loopback only, never 0.0.0.0
+    healthcheck: *healthcheck
+
 networks:
   plant:
     internal: true # no route to the host or the internet
+  edge: {}
+
+volumes:
+  historian-data: # cleared by `make reset`

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DVAP HMI – Water Treatment Plant</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <strong>DVAP</strong>
+      <span>Water Treatment Plant</span>
+      <span class="sim">SIMULATION</span>
+    </div>
+    <div class="chips">
+      <span class="chip" id="device-tag" title="PLC device_tag register">—</span>
+      <span class="chip" id="mode">MODE —</span>
+      <span class="chip" id="il-level_hh">LEVEL HH</span>
+      <span class="chip" id="il-chlorine_hh">CHLORINE HH</span>
+      <span class="chip" id="il-dry_run">DRY-RUN</span>
+      <span class="chip" id="bypass" hidden>MAINTENANCE BYPASS</span>
+      <span class="chip" id="conn">CONNECTING</span>
+      <time id="clock"></time>
+    </div>
+  </header>
+
+  <!-- The stage-demo moment: shown when plant-sim reports a physical incident. -->
+  <section id="incident" role="alert" aria-live="assertive" hidden>
+    <div class="incident-body">
+      <svg class="incident-icon" viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M24 4 46 43H2Z" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/>
+        <path d="M24 19v12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="24" cy="37" r="2.4" fill="currentColor"/>
+      </svg>
+      <div>
+        <div class="incident-kicker">Physical incident</div>
+        <div class="incident-type" id="incident-type"></div>
+      </div>
+      <div class="incident-time">
+        <div id="incident-since"></div>
+        <div id="incident-elapsed"></div>
+      </div>
+    </div>
+  </section>
+
+  <main>
+    <div class="left">
+      <section class="card pid" id="pid-card">
+        <h2>Process overview</h2>
+        <svg id="pid" viewBox="0 0 920 450" role="img" aria-label="Process diagram: inflow pump, tank, drain valve and chlorine dosing">
+          <defs>
+            <clipPath id="tank-clip"><rect x="302" y="132" width="236" height="226" rx="4"/></clipPath>
+            <marker id="arrow" viewBox="0 0 10 10" refX="3" refY="5" markerUnits="userSpaceOnUse" markerWidth="24" markerHeight="24" orient="auto">
+              <path d="M0 0 10 5 0 10Z" class="arrowhead"/>
+            </marker>
+          </defs>
+
+          <!-- Pipes: a grey base pipe with an animated "flow" overlay on top. -->
+          <g id="pipe-inflow">
+            <path class="pipe" d="M24 100H150M206 100H360V130"/>
+            <path class="flow water" d="M24 100H150M206 100H360V130"/>
+          </g>
+          <g id="pipe-drain">
+            <path class="pipe" d="M420 360V402H614M666 402H872" marker-end="url(#arrow)"/>
+            <path class="flow water" d="M420 360V402H614M666 402H868"/>
+          </g>
+          <g id="pipe-dosing">
+            <path class="pipe thin" d="M700 82H636M588 82H480V130"/>
+            <path class="flow chlorine" d="M700 82H636M588 82H480V130"/>
+          </g>
+
+          <!-- Tank T-101 -->
+          <g clip-path="url(#tank-clip)">
+            <rect id="water" x="302" y="245" width="236" height="115"/>
+            <path id="water-surface" d="M302 245h236" />
+          </g>
+          <g id="spill" hidden>
+            <path class="spill" d="M300 134c-10 0-14 8-14 20v206"/>
+            <path class="spill" d="M540 134c10 0 14 8 14 20v206"/>
+          </g>
+          <rect id="tank" class="vessel" x="300" y="130" width="240" height="230" rx="6"/>
+          <g id="sp-marker">
+            <path class="sp-line" d="M290 245h250"/>
+            <text class="small" x="286" y="249" text-anchor="end">SP</text>
+          </g>
+          <text class="label" x="420" y="122" text-anchor="middle">TANK T-101</text>
+          <text class="big" id="v-level" x="420" y="238" text-anchor="middle">—</text>
+          <text class="small on-water" x="420" y="262" text-anchor="middle">LEVEL</text>
+
+          <!-- Inflow pump P-101 -->
+          <g id="pump" class="equip stop" transform="translate(178 100)">
+            <circle r="28"/><path d="M-10-14 16 0-10 14Z"/>
+          </g>
+          <text class="label" x="178" y="150" text-anchor="middle">INFLOW PUMP P-101</text>
+          <text class="state" id="s-pump" x="178" y="166" text-anchor="middle">—</text>
+          <text class="label" x="24" y="84">RAW WATER</text>
+
+          <!-- Drain valve V-101 -->
+          <g id="valve" class="equip stop" transform="translate(640 402)">
+            <path d="M-24-15 0 0-24 15ZM24-15 0 0 24 15Z"/><path class="stem" d="M0 0V-22M-12-22H12"/>
+          </g>
+          <text class="label" x="640" y="440" text-anchor="middle">DRAIN VALVE V-101</text>
+          <text class="state" id="s-valve" x="640" y="366" text-anchor="middle">—</text>
+          <text class="label" x="890" y="430" text-anchor="end">TO DISTRIBUTION</text>
+
+          <!-- Chlorine dosing -->
+          <rect class="vessel" x="700" y="42" width="96" height="80" rx="6"/>
+          <rect class="chem" x="703" y="72" width="90" height="47" rx="3"/>
+          <text class="label" x="748" y="34" text-anchor="middle">CHLORINE NaOCl</text>
+          <g id="doser" class="equip stop" transform="translate(612 82)">
+            <circle r="24"/><path d="M8-12-14 0 8 12Z"/>
+          </g>
+          <text class="label" x="612" y="48" text-anchor="middle">DOSING PUMP P-201</text>
+          <text class="state" id="s-doser" x="612" y="124" text-anchor="middle">—</text>
+
+          <!-- Instrument tags -->
+          <g class="tag" transform="translate(232 48)"><rect width="96" height="38" rx="5"/>
+            <text class="tag-name" x="8" y="14">FI-101 INFLOW</text><text class="tag-val" id="v-inflow" x="8" y="31">—</text></g>
+          <g class="tag" transform="translate(716 340)"><rect width="104" height="38" rx="5"/>
+            <text class="tag-name" x="8" y="14">FI-102 OUTFLOW</text><text class="tag-val" id="v-outflow" x="8" y="31">—</text></g>
+          <g class="tag" id="tag-cl" transform="translate(566 196)"><rect width="118" height="54" rx="5"/>
+            <text class="tag-name" x="8" y="15">AI-101 CHLORINE</text><text class="tag-val large" id="v-ppm" x="8" y="41">—</text></g>
+          <g class="tag" transform="translate(172 256)"><rect width="110" height="38" rx="5"/>
+            <text class="tag-name" x="8" y="14">LEVEL SETPOINT</text><text class="tag-val" id="v-level-sp" x="8" y="31">—</text></g>
+          <g class="tag" transform="translate(566 262)"><rect width="118" height="38" rx="5"/>
+            <text class="tag-name" x="8" y="14">CHLORINE SETPOINT</text><text class="tag-val" id="v-ppm-sp" x="8" y="31">—</text></g>
+        </svg>
+        <dl class="plc-text">
+          <div><dt>Alarm message</dt><dd id="alarm-message">—</dd></div>
+          <div><dt>Operator note</dt><dd id="operator-note">—</dd></div>
+        </dl>
+      </section>
+
+      <div class="charts">
+        <section class="card"><h2>Tank level <span class="unit">%</span></h2><div class="chart"><canvas id="chart-level"></canvas></div></section>
+        <section class="card"><h2>Chlorine <span class="unit">ppm</span></h2><div class="chart"><canvas id="chart-ppm"></canvas></div></section>
+      </div>
+
+      <section class="card">
+        <h2>Alarms and events</h2>
+        <div class="table-wrap">
+          <table id="alarms">
+            <thead><tr><th>Time</th><th>Kind</th><th>Name</th><th>Message</th></tr></thead>
+            <tbody><tr class="empty"><td colspan="4">No events recorded.</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <aside class="card agent">
+      <h2>Agent activity <span class="chip" id="agent-conn">OFFLINE</span></h2>
+      <p class="hint">Tool calls and reasoning summaries from the operator agent, live from the <code>agent.events</code> bus channel.</p>
+      <ol id="agent-log"><li class="empty">Waiting for agent events…</li></ol>
+    </aside>
+  </main>
+
+  <script src="/static/vendor/chart.umd.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

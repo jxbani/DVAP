@@ -79,3 +79,20 @@ INTERLOCKS = ["level_hh", "chlorine_hh", "dry_run"]
 
 def bitfield(flags: list[bool]) -> int:
     return sum(1 << i for i, on in enumerate(flags) if on)
+
+
+def flags(value: int, names: list[str]) -> dict[str, bool]:
+    """Expand a bitfield register into {name: bool}."""
+    return {name: bool(int(value) >> i & 1) for i, name in enumerate(names)}
+
+
+def blocks() -> list[tuple[str, int, int, list[Tag]]]:
+    """Group the tags into contiguous (table, address, count, tags) runs, one Modbus read each."""
+    runs: list[tuple[str, int, int, list[Tag]]] = []
+    for tag in sorted(TAGS, key=lambda t: (t.table, t.address)):
+        if runs and runs[-1][0] == tag.table and runs[-1][1] + runs[-1][2] == tag.address:
+            table, start, count, tags = runs[-1]
+            runs[-1] = (table, start, count + tag.length, [*tags, tag])
+        else:
+            runs.append((tag.table, tag.address, tag.length, [tag]))
+    return runs

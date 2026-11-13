@@ -1,6 +1,6 @@
 """PLC control logic: AUTO/MANUAL control plus safety interlocks. Pure, no I/O."""
 
-from plc.tags import INTERLOCKS
+from dvap_common.plc_tags import INTERLOCKS
 
 
 def clamp(x: float, lo: float, hi: float) -> float:

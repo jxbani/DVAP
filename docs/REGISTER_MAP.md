@@ -10,7 +10,7 @@ both servers are reachable on the internal docker network and nowhere else.
   (no scaling): `Boolean` for coils, `Double` for scaled registers, `UInt16` for plain
   integers and bitfields, `String` for strings.
 
-The source of truth is `services/plc/plc/tags.py`; a test fails if a tag is missing here.
+The source of truth is `dvap_common/plc_tags.py`; a test fails if a tag is missing here.
 
 ## Coils (read/write, FC 1/5/15)
 

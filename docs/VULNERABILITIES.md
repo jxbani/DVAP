@@ -10,3 +10,6 @@ the simulated lab network. In code they are marked with `# DVAP-VULN: <challenge
 
 Also by design, and the reason the above are reachable: Modbus/TCP has no authentication and
 the OPC UA server accepts anonymous sessions with no security policy.
+
+The `bus` Redis instance also has no password. Nothing exploits it yet; it is reserved for a
+later inter-agent challenge and **still needs a challenge ID** before that challenge lands.

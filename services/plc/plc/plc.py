@@ -14,8 +14,8 @@ from asyncua import Server, ua
 from pymodbus.server import ModbusTcpServer
 from pymodbus.simulator import DataType, SimData, SimDevice
 
+from dvap_common.plc_tags import INCIDENT_BITS, INTERLOCKS, TAGS, Tag, bitfield
 from plc.logic import Controller
-from plc.tags import INCIDENT_BITS, INTERLOCKS, TAGS, Tag, bitfield
 
 log = logging.getLogger("plc")
 
