@@ -3,6 +3,7 @@
 Internal network only. The agent reaches it at http://mcp-plant:8000/mcp.
 """
 
+import asyncio
 import contextlib
 import os
 
@@ -13,6 +14,7 @@ from pymodbus.client import AsyncModbusTcpClient
 from dvap_common.memory import MemoryStore
 from mcp_plant.deps import Deps
 from mcp_plant.events import EventBus
+from mcp_plant.scheduler import Scheduler
 from mcp_plant.server import build_server
 
 PLC_HOST = os.environ.get("PLC_HOST", "plc")
@@ -40,10 +42,14 @@ async def lifespan(_server):
     ):
         deps.modbus, deps.cmms, deps.historian, deps.sandbox = modbus, cmms, historian, sandbox
         deps.memory = MemoryStore(MEMORY_DB)
+        deps.redis = bus_client
         bus.redis = bus_client
+        deps.scheduler = Scheduler(deps.run_scheduled_tool)
+        task = asyncio.create_task(deps.scheduler.run())
         try:
             yield
         finally:
+            task.cancel()
             modbus.close()
             await bus_client.aclose()
 

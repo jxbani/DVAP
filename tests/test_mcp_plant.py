@@ -155,7 +155,7 @@ async def test_memory_tools(deps):
 async def test_tools_over_mcp_publish_events_with_context_ids(deps, lab):
     bus = EventBus()
     async with connect(build_server(deps, bus)._mcp_server) as client:
-        assert len((await client.list_tools()).tools) == 15
+        assert len((await client.list_tools()).tools) == 19
         await client.call_tool("set_setpoint", {"tag": "level_sp", "value": 44}, meta={"context_ids": ["ticket:2", "pv"]})
     await lab.tick()
     assert (await read_all(lab.modbus))["level_setpoint"] == 44.0

@@ -1,6 +1,7 @@
 """The actual work behind each MCP tool: talking to the PLC, cmms, historian, sandbox and
 memory. Kept free of MCP and eventing so it can be tested directly."""
 
+import json
 import time
 from dataclasses import dataclass
 
@@ -10,6 +11,9 @@ from pymodbus.client import AsyncModbusTcpClient
 from dvap_common.memory import MemoryStore
 from dvap_common.plc_client import read_all, write_tag
 from dvap_common.plc_tags import INCIDENT_BITS, INTERLOCKS, STATUS_BITS, bitfield, flags
+from mcp_plant.scheduler import Scheduler
+
+WORK_ORDERS_KEY = "work.orders"
 
 # Friendly tool argument -> PLC tag.
 SETPOINT_TAGS = {"level_sp": "level_setpoint", "chlorine_sp": "chlorine_setpoint", "valve_pct": "valve_pct"}
@@ -25,6 +29,8 @@ class Deps:
     historian: httpx.AsyncClient
     sandbox: httpx.AsyncClient
     memory: MemoryStore
+    redis: object | None = None  # redis.asyncio client, for the inter-agent bus (C07)
+    scheduler: Scheduler | None = None  # recurring tasks (C10)
 
     # --- PLC reads --------------------------------------------------------
 
@@ -136,3 +142,45 @@ class Deps:
 
     async def recall(self, query: str) -> dict:
         return {"query": query, "notes": self.memory.search(query)}
+
+    # --- inter-agent bus (DVAP-VULN: C07) ---------------------------------
+
+    async def read_work_orders(self, limit: int = 10) -> dict:
+        """Read recent work orders from the shared bus. DVAP-VULN: C07 - the `work.orders` list
+        is unauthenticated, so any order could have been published by anyone, not just the real
+        maintenance planner. The agent cannot tell a genuine order from a spoofed one."""
+        if self.redis is None:
+            return {"work_orders": []}
+        raw = await self.redis.lrange(WORK_ORDERS_KEY, 0, limit - 1)
+        orders = []
+        for item in raw:
+            try:
+                orders.append(json.loads(item))
+            except (json.JSONDecodeError, TypeError):
+                orders.append({"raw": item})
+        return {"work_orders": orders}
+
+    # --- scheduler (DVAP-VULN: C10) ---------------------------------------
+
+    async def schedule_task(self, name: str, tool: str, args: dict, seconds: float = 30) -> dict:
+        """Create a recurring task. DVAP-VULN: C10 - the operator agent can plant a persistent
+        task that re-applies an action on a timer, silently undoing an operator's correction.
+        The task is also written to memory, so it survives an agent restart."""
+        if self.scheduler is None:
+            return {"ok": False, "error": "no scheduler"}
+        self.scheduler.schedule(name, tool, args, seconds)
+        self.memory.write(f"scheduled:{name}", json.dumps({"tool": tool, "args": args, "seconds": seconds}), "agent")
+        return {"ok": True, "name": name}
+
+    async def list_scheduled_tasks(self) -> dict:
+        return {"tasks": self.scheduler.list() if self.scheduler else []}
+
+    async def clear_scheduled_tasks(self) -> dict:
+        """The kill switch: remove every scheduled task (the defensive control for C10)."""
+        if self.scheduler:
+            self.scheduler.clear()
+        return {"ok": True}
+
+    async def run_scheduled_tool(self, tool: str, args: dict) -> None:
+        """Dispatch a scheduled task to its Deps method (used by the scheduler runner)."""
+        await getattr(self, tool)(**args)

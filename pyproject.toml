@@ -25,10 +25,10 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = [".", "services/plant-sim", "services/plc", "services/historian", "services/hmi", "services/cmms", "services/agent-operator", "services/mcp-plant", "services/sandbox", "services/scoreboard", "services/vendor-analytics"]
+pythonpath = [".", "services/plant-sim", "services/plc", "services/historian", "services/hmi", "services/cmms", "services/agent-operator", "services/mcp-plant", "services/sandbox", "services/scoreboard", "services/vendor-analytics", "services/maintenance-planner"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
 line-length = 110
-src = [".", "services/plant-sim", "services/plc", "services/historian", "services/hmi", "services/cmms", "services/agent-operator", "services/mcp-plant", "services/sandbox", "services/scoreboard", "services/vendor-analytics"]
+src = [".", "services/plant-sim", "services/plc", "services/historian", "services/hmi", "services/cmms", "services/agent-operator", "services/mcp-plant", "services/sandbox", "services/scoreboard", "services/vendor-analytics", "services/maintenance-planner"]

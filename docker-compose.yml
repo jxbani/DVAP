@@ -85,6 +85,7 @@ services:
       CMMS_URL: http://cmms:8000
       HISTORIAN_URL: http://historian:8000
       MCP_URL: http://mcp-plant:8000
+      AGENT_URL: http://agent-operator:8000 # for the C09 busy-human approver
       REDIS_URL: redis://bus:6379
     volumes: ["./challenges:/app/challenges:ro"]
     depends_on:
@@ -153,6 +154,16 @@ services:
     depends_on:
       mcp-plant: { condition: service_healthy }
       vendor-analytics: { condition: service_healthy }
+    networks: [plant]
+    healthcheck: *healthcheck
+
+  # Second agent: issues work orders to the operator over the unauthenticated Redis bus (C07).
+  maintenance-planner:
+    build: { context: ., args: { SERVICE: maintenance-planner, PACKAGE: maintenance_planner } }
+    environment:
+      REDIS_URL: redis://bus:6379
+    depends_on:
+      bus: { condition: service_healthy }
     networks: [plant]
     healthcheck: *healthcheck
 

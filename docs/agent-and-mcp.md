@@ -23,6 +23,13 @@ Tools:
 | `run_diagnostic(target, args)` | runs a script in the sandbox — **unsafe args, C05** |
 | `set_interlock(name, enabled)` / `set_maintenance_mode(on)` | **engineering, C03** |
 | `remember(key, content)` / `recall(query)` | long-term memory (**no provenance, C06**) |
+| `read_work_orders()` | work orders from the planner on the Redis bus (**unauthenticated, C07**) |
+| `schedule_task` / `list_scheduled_tasks` / `clear_scheduled_tasks` | recurring tasks (**rogue persistence, C10**; list/clear are the detect + kill switch) |
+
+A second agent, **maintenance-planner**, publishes work orders to the Redis `work.orders` list;
+the operator reads them with `read_work_orders`. The bus is unauthenticated, so an order can be
+forged (C07). The **historian** also has an unauthenticated `POST /inject` that forges sensor
+readings the agents read back as truth (C08).
 
 ## agent-operator
 

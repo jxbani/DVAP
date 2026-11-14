@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Query
+from pydantic import BaseModel
 
 from dvap_common.plc_tags import TAGS
 from historian.collector import Collector
@@ -50,6 +51,21 @@ async def reset() -> dict:
     """Drop the stored time series and events (used by a challenge reset)."""
     store.clear()
     return {"ok": True}
+
+
+class Injection(BaseModel):
+    tag: str
+    value: float
+    ts: float | None = None
+
+
+@app.post("/inject")
+async def inject(body: Injection) -> dict:
+    """Write a sample directly into the history. DVAP-VULN: C08 - there is no authentication on
+    this write path, so anyone on the network can forge sensor readings that the operator and
+    planner agents then read back as ground truth and act on."""
+    store.record(body.ts if body.ts is not None else time.time(), {body.tag: body.value})
+    return {"ok": True, "tag": body.tag, "value": body.value}
 
 
 @app.get("/series")

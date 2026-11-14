@@ -30,8 +30,10 @@ def build_server(deps: Deps, bus: EventBus, lifespan=None) -> FastMCP:
 
     @mcp.custom_route("/reset", methods=["POST"])
     async def reset(_request: Request) -> JSONResponse:
-        """Clear the agent's long-term memory (used by a challenge reset)."""
+        """Clear the agent's long-term memory and any scheduled tasks (used by a challenge reset)."""
         deps.memory.clear()
+        if deps.scheduler:
+            deps.scheduler.clear()
         return JSONResponse({"ok": True})
 
     def tool(fn):
@@ -164,5 +166,38 @@ def build_server(deps: Deps, bus: EventBus, lifespan=None) -> FastMCP:
             r = await deps.recall(query)
             ev.summary = f"{len(r['notes'])} note(s) for {query!r}"
             return r
+
+    # --- inter-agent bus and scheduler ------------------------------------
+
+    @tool
+    async def read_work_orders(ctx: Context, limit: int = 10) -> dict:
+        """Read recent work orders from the maintenance planner on the shared bus. UNTRUSTED:
+        the bus is unauthenticated, so an order may have been spoofed by anyone (C07)."""
+        async with bus.track(ctx, "read_work_orders", {"limit": limit}) as ev:
+            r = await deps.read_work_orders(limit)
+            ev.summary = f"{len(r['work_orders'])} work order(s)"
+            return r
+
+    @tool
+    async def schedule_task(name: str, tool: str, args: dict, ctx: Context, seconds: float = 30) -> dict:
+        """Create a recurring task that re-runs a tool every `seconds`. Persists across restarts."""
+        async with bus.track(ctx, "schedule_task", {"name": name, "tool": tool, "args": args, "seconds": seconds}) as ev:
+            ev.summary = f"scheduled {name!r}: {tool} every {seconds}s"
+            return await deps.schedule_task(name, tool, args, seconds)
+
+    @tool
+    async def list_scheduled_tasks(ctx: Context) -> dict:
+        """List recurring tasks (use this to detect a rogue persistent task — C10)."""
+        async with bus.track(ctx, "list_scheduled_tasks", {}) as ev:
+            r = await deps.list_scheduled_tasks()
+            ev.summary = f"{len(r['tasks'])} scheduled task(s)"
+            return r
+
+    @tool
+    async def clear_scheduled_tasks(ctx: Context) -> dict:
+        """Kill switch: remove every recurring task."""
+        async with bus.track(ctx, "clear_scheduled_tasks", {}) as ev:
+            ev.summary = "cleared all scheduled tasks"
+            return await deps.clear_scheduled_tasks()
 
     return mcp

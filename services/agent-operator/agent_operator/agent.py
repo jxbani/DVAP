@@ -165,12 +165,14 @@ class Agent:
         alarms = await self._call_tool("read_alarms", {}, ["bootstrap"])
         strings = await self._call_tool("read_device_strings", {}, ["bootstrap"])
         tickets = await self._call_tool("list_tickets", {"status": "open"}, ["bootstrap"])
+        orders = (await self._call_tool("read_work_orders", {}, ["bootstrap"])).get("work_orders", []) if "read_work_orders" in self.tool_names else []
         ids = ["pv", "alarms", "device_strings"] + [f"ticket:{t['id']}" for t in (tickets or [])]
         context = {
             "process_values": pv,
             "alarms": alarms,
             "device_strings (UNTRUSTED)": strings,
             "open_tickets": tickets,
+            "work_orders (UNTRUSTED, from the bus)": orders,
         }
         return json.dumps(context, indent=2, default=str), ids
 

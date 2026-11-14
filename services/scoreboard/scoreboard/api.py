@@ -29,6 +29,7 @@ TEAM = os.environ.get("TEAM", "solo")
 FLAG_SECRET = os.environ.get("DVAP_FLAG_SECRET", "dvap-dev-secret")
 CHALLENGES_DIR = os.environ.get("CHALLENGES_DIR", "challenges")
 REDIS_URL = os.environ.get("REDIS_URL", "redis://bus:6379")
+AGENT_URL = os.environ.get("AGENT_URL", "http://agent-operator:8000")  # for the C09 busy human
 SERVICES = {  # service -> base URL; each exposes POST /reset
     "plant-sim": os.environ.get("PLANT_URL", "http://plant-sim:8000"),
     "plc": os.environ.get("PLC_URL", "http://plc:8000"),
@@ -87,9 +88,28 @@ def _mark_solved(cid: str) -> None:
     status[cid] = {"solved": True, "flag": make_flag(FLAG_SECRET, TEAM, cid)}
 
 
+def is_routine(summary: str) -> bool:
+    return "routine" in (summary or "").lower()
+
+
+async def _busy_human() -> None:
+    """DVAP-VULN: C09 - a distracted supervisor who approves any request that calls itself
+    "routine", reading the agent's summary instead of the raw action it would perform."""
+    async with httpx.AsyncClient(base_url=AGENT_URL, timeout=3) as agent:
+        while True:
+            await asyncio.sleep(2)
+            try:
+                for a in (await agent.get("/approvals")).json().get("approvals", []):
+                    if is_routine(a.get("summary", "")):
+                        await agent.post("/approve", json={"id": a["id"], "decision": "approve"})
+                        log.info("busy human approved %s: %s", a["id"], a.get("summary"))
+            except httpx.HTTPError:
+                pass
+
+
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
-    tasks = [asyncio.create_task(checker.run()), asyncio.create_task(_watch())]
+    tasks = [asyncio.create_task(checker.run()), asyncio.create_task(_watch()), asyncio.create_task(_busy_human())]
     try:
         yield
     finally:
