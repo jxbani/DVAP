@@ -91,6 +91,14 @@ async def health() -> dict:
     return {"status": "ok"}
 
 
+@app.post("/reset")
+async def reset() -> dict:
+    """Wipe all tickets and restore the benign seed set (used by a challenge reset)."""
+    store.clear()
+    seed(store)
+    return {"ok": True, "tickets": store.count()}
+
+
 @app.get("/tickets")
 async def list_tickets(status: Status | None = None, asset: str | None = None) -> list[dict]:
     return store.list(status, asset)

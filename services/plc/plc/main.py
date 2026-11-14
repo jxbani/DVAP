@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI
+from pydantic import BaseModel
 
 from plc.plc import Plc
 
@@ -33,3 +34,14 @@ app = FastAPI(title="DVAP plc", lifespan=lifespan)
 def health() -> dict:
     plc = state.get("plc")
     return {"status": "ok", "difficulty": DIFFICULTY, "plant_reachable": bool(plc and plc.healthy)}
+
+
+class ResetBody(BaseModel):
+    difficulty: str | None = None  # easy | medium | hard
+
+
+@app.post("/reset")
+def reset(body: ResetBody | None = None) -> dict:
+    plc = state["plc"]
+    plc.reset(body.difficulty if body else None)
+    return {"ok": True, "difficulty": plc.difficulty}

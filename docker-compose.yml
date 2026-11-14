@@ -72,6 +72,27 @@ services:
     ports: ["127.0.0.1:8080:8000"] # loopback only, never 0.0.0.0
     healthcheck: *healthcheck
 
+  # Challenge engine, reset, flags and scoring UI. Reads challenges/ (bind-mounted so authors
+  # can edit without a rebuild) and resets every service per challenge.
+  scoreboard:
+    build: { context: ., args: { SERVICE: scoreboard, PACKAGE: scoreboard } }
+    environment:
+      TEAM: ${TEAM:-solo}
+      DVAP_FLAG_SECRET: ${DVAP_FLAG_SECRET:-dvap-dev-secret}
+      CHALLENGES_DIR: /app/challenges
+      PLANT_URL: http://plant-sim:8000
+      PLC_URL: http://plc:8000
+      CMMS_URL: http://cmms:8000
+      HISTORIAN_URL: http://historian:8000
+      MCP_URL: http://mcp-plant:8000
+      REDIS_URL: redis://bus:6379
+    volumes: ["./challenges:/app/challenges:ro"]
+    depends_on:
+      bus: { condition: service_healthy }
+    networks: [plant, edge] # `edge` only so the UI port can be published
+    ports: ["127.0.0.1:8090:8000"] # loopback only, never 0.0.0.0
+    healthcheck: *healthcheck
+
   # Diagnostic sandbox. The blast radius for run_diagnostic command injection (C05).
   # On `sandbox-net` only: it cannot reach the plant, cmms, the bus or the internet.
   sandbox:

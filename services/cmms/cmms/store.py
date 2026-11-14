@@ -69,3 +69,9 @@ class TicketStore:
 
     def count(self) -> int:
         return self.db.execute("SELECT COUNT(*) FROM tickets").fetchone()[0]
+
+    def clear(self) -> None:
+        """Remove all tickets and reset the id counter, so a re-seed is identical each time."""
+        with self.db:
+            self.db.execute("DELETE FROM tickets")
+            self.db.execute("DELETE FROM sqlite_sequence WHERE name = 'tickets'")

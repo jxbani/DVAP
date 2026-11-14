@@ -45,6 +45,13 @@ async def latest() -> dict:
     return {"ts": collector.latest_ts, "values": collector.latest}
 
 
+@app.post("/reset")
+async def reset() -> dict:
+    """Drop the stored time series and events (used by a challenge reset)."""
+    store.clear()
+    return {"ok": True}
+
+
 @app.get("/series")
 async def series(
     tag: str,

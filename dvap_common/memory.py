@@ -38,6 +38,10 @@ class MemoryStore:
         """Every note, oldest first."""
         return [dict(r) for r in self.db.execute("SELECT * FROM notes ORDER BY created_at, rowid")]
 
+    def clear(self) -> None:
+        with self.db:
+            self.db.execute("DELETE FROM notes")
+
     def delete(self, key: str) -> bool:
         with self.db:
             return self.db.execute("DELETE FROM notes WHERE key = ?", (key,)).rowcount > 0

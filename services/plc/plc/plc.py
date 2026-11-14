@@ -102,6 +102,17 @@ class Plc:
         await self.modbus.shutdown()
         await self.opcua.stop()
 
+    def reset(self, difficulty: str | None = None) -> None:
+        """Restore power-on defaults (optionally at a new difficulty) for a challenge reset.
+        The next scan republishes them to both protocols, clearing any attacker writes."""
+        if difficulty:
+            self.difficulty = difficulty
+            self.enabled = self.cfg["difficulty"][difficulty]
+        self.controller = Controller(self.cfg, self.enabled)
+        self.mem = {t.name: "" if t.chars else 0 for t in TAGS} | self.cfg["defaults"]
+        self.mem["interlock_enable"] = self.controller.default_enable
+        self._acting = dict.fromkeys(INTERLOCKS, False)
+
     async def _modbus_write(self, tag: Tag, raw: list) -> None:
         await self.modbus.async_setValues(DEVICE_ID, WRITE_FC[tag.table], tag.address, raw)
 

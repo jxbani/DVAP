@@ -28,6 +28,12 @@ def build_server(deps: Deps, bus: EventBus, lifespan=None) -> FastMCP:
     async def health(_request: Request) -> JSONResponse:
         return JSONResponse({"status": "ok"})
 
+    @mcp.custom_route("/reset", methods=["POST"])
+    async def reset(_request: Request) -> JSONResponse:
+        """Clear the agent's long-term memory (used by a challenge reset)."""
+        deps.memory.clear()
+        return JSONResponse({"ok": True})
+
     def tool(fn):
         """Register `fn` as an MCP tool (its name and docstring describe it to the agent)."""
         return mcp.tool(name=fn.__name__)(fn)

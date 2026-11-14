@@ -41,3 +41,8 @@ class Store:
             (kind, kind, limit),
         ).fetchall()
         return [dict(zip(("id", "ts", "kind", "name", "message"), r, strict=True)) for r in rows]
+
+    def clear(self) -> None:
+        with self.db:
+            self.db.execute("DELETE FROM samples")
+            self.db.execute("DELETE FROM events")
