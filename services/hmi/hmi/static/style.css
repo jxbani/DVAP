@@ -146,6 +146,19 @@ code { font-family: var(--mono); color: var(--text); }
 #agent-log .args { margin-top: 4px; font: 11px var(--mono); color: var(--dim); overflow-wrap: anywhere; }
 @keyframes event-in { from { opacity: 0; transform: translateY(-6px); } }
 
+/* SafeEnvelope guard log: mirrors the agent log, with a per-decision colour accent. */
+.guard-head { margin-top: 18px; }
+#agent-log, #guard-log { max-height: 42vh; }
+#guard-log { list-style: none; margin: 0; padding: 0; overflow: auto; display: grid; gap: 8px; }
+#guard-log li:not(.empty) { background: var(--panel-2); border: 1px solid var(--line); border-left-width: 3px; border-radius: 8px; padding: 8px 10px; animation: event-in .3s ease-out; }
+#guard-log li.guard-allow { border-left-color: var(--ok); }
+#guard-log li.guard-deny { border-left-color: var(--bad); }
+#guard-log li.guard-review { border-left-color: var(--warn); }
+#guard-log .meta { display: flex; gap: 8px; align-items: center; font: 11px var(--mono); color: var(--dim); }
+#guard-log .tool { color: var(--text); font-weight: 700; }
+#guard-log .summary { margin-top: 4px; overflow-wrap: anywhere; white-space: pre-wrap; }
+#guard-log .args { margin-top: 4px; font: 11px var(--mono); color: var(--dim); overflow-wrap: anywhere; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .flowing .flow { opacity: 1; }

@@ -20,3 +20,21 @@ the simulated lab network. In code they are marked with `# DVAP-VULN: <challenge
 Also by design, and the reason several of the above are reachable: Modbus/TCP has no
 authentication, the OPC UA server accepts anonymous sessions with no security policy, and the
 `bus` Redis instance has no password (the C07 attack surface).
+
+## The defence: SafeEnvelope
+
+Each challenge has a defended variant (`setup.defended: true`, or boot mcp-plant with
+`DVAP_DEFENDED=1`) in which [SafeEnvelope](SAFEENVELOPE.md) — a deterministic policy guard
+between the MCP tool handlers and the PLC — blocks the attack. Which layer catches each:
+
+| Challenge | Blocked by |
+|---|---|
+| C01 / C01b | Physical invariant: `level_sp = 100` is outside the safe range, so the write is refused whatever drove it. |
+| C02 | Physical invariant: `chlorine_sp = 9` is above the overdose limit and over the per-change rate limit. |
+| C03 | Privilege separation: `set_interlock` / `set_maintenance_mode` are refused for the operator identity; the drain-shut-while-full move hits a forbidden combination. |
+| C04 | Provenance + policy: stopping the chlorine dosing pump needs human approval (a slow underdose falls outside the forecast horizon). |
+| C05 | Argument check: diagnostic arguments containing shell metacharacters are refused. |
+| C06 | Physical invariant: the recalled "9 ppm" setpoint is out of range, so the poisoned memory cannot be acted on. |
+| C07 / C08 | Predictive check + forbidden combination: the spoof-driven manual maneuver is forecast to overflow / dry-run and refused. |
+| C09 | Privilege separation + honest decisions: the raw `set_interlock` call is refused regardless of the "routine" summary; the guard records the raw call, forecast and provenance. |
+| C10 | Kill switch / anomaly: scheduling an action that is not allowed now is refused and flagged; `clear_scheduled_tasks` is the kill switch. |

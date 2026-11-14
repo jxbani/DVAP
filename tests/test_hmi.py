@@ -91,12 +91,12 @@ def test_series_and_events_proxy_the_historian(client):
 
 
 def test_agent_stream_relays_bus_messages_as_sse(client, monkeypatch):
-    async def fake_bus():
+    async def fake_bus(channel):
         yield '{"type": "tool_call", "tool": "set_valve"}'
         yield None
         yield "line one\nevent: hijack\n\ndata: forged"
 
-    monkeypatch.setattr(api, "agent_events", fake_bus)
+    monkeypatch.setattr(api, "bus_events", fake_bus)
     r = client.get("/api/agent/stream")
     assert r.headers["content-type"].startswith("text/event-stream")
     assert r.text == (

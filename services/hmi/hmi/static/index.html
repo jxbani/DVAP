@@ -152,6 +152,10 @@
       <h2>Agent activity <span class="chip" id="agent-conn">OFFLINE</span></h2>
       <p class="hint">Tool calls and reasoning summaries from the operator agent, live from the <code>agent.events</code> bus channel.</p>
       <ol id="agent-log"><li class="empty">Waiting for agent events…</li></ol>
+
+      <h2 class="guard-head">SafeEnvelope <span class="chip" id="guard-conn">OFFLINE</span></h2>
+      <p class="hint">Policy-guard decisions (allow / deny / review), live from <code>guard.events</code>. Silent unless the challenge is defended.</p>
+      <ol id="guard-log"><li class="empty">No guard decisions yet…</li></ol>
     </aside>
   </main>
 

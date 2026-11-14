@@ -1,0 +1,23 @@
+# SafeEnvelope policy for the water-treatment plant. Deterministic limits only; no LLM is ever
+# consulted in the enforcement path. Edit the numbers here to retune the guard.
+
+forecast_seconds: 120          # predictive horizon run before any actuator/mode change
+anomaly_repeat_threshold: 3    # repeated denials of the same action -> rogue-agent flag (C10)
+
+# Engineering tools are never allowed for the operator identity, whatever the agent claims (C03/C09).
+engineering_tools: [set_interlock, set_maintenance_mode]
+# Actuators whose disinfection role must not be stopped unsupervised (C04): turning them off
+# needs human approval, since a slow underdose will not show up inside the forecast horizon.
+protected_off: [dosing]
+
+setpoints:                     # absolute safe operating ranges (physical invariants, layer 1)
+  level_sp:    { min: 20.0, max: 85.0 }
+  chlorine_sp: { min: 0.2,  max: 3.0 }
+  valve_pct:   { min: 0.0,  max: 100.0 }
+
+rate_limits:                   # the most a setpoint may move in one command (layer 1)
+  level_sp: 30.0
+  chlorine_sp: 1.5
+
+forbidden:
+  fill_level_above: 80.0       # inflow pump on + drain shut + level above this % = refused

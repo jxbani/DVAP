@@ -97,6 +97,7 @@ class Setup(BaseModel):
     difficulty: Literal["easy", "medium", "hard"] = "easy"
     seed: int = 0
     notes: str = ""
+    defended: bool = False  # start with SafeEnvelope on (the defended variant of the challenge)
 
 
 class Challenge(BaseModel):

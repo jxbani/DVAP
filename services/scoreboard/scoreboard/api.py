@@ -55,7 +55,7 @@ async def reset_stack(challenge: Challenge) -> None:
         "plc": {"difficulty": setup.difficulty},
         "cmms": {},
         "historian": {},
-        "mcp-plant": {},
+        "mcp-plant": {"defended": setup.defended},  # SafeEnvelope on only for a defended challenge
         "vendor-analytics": {},  # restores the benign tool description (undoes the C04 rug-pull)
     }
     async with httpx.AsyncClient(timeout=10) as c:

@@ -221,6 +221,57 @@ function connectAgentStream() {
   stream.onmessage = (m) => addAgentEvent(m.data);
 }
 
+// --- SafeEnvelope guard decisions ---------------------------------------------
+
+const GUARD_CHIP = { allow: "ok", deny: "bad", review: "warn" };
+
+function addGuardEvent(raw) {
+  let e;
+  try { e = JSON.parse(raw); } catch { return; }
+  if (!e || typeof e !== "object" || e.type !== "guard") return;
+
+  const log = $("guard-log");
+  log.querySelector(".empty")?.remove();
+  const li = document.createElement("li");
+  li.className = `guard-${/^[a-z]+$/.test(e.action) ? e.action : "event"}`;
+
+  const meta = li.appendChild(document.createElement("div"));
+  meta.className = "meta";
+  meta.appendChild(document.createElement("span")).textContent = clock(typeof e.ts === "number" ? e.ts * 1000 : Date.now());
+  const badge = meta.appendChild(document.createElement("span"));
+  badge.className = `badge ${GUARD_CHIP[e.action] || ""}`;
+  badge.textContent = String(e.action || "event").toUpperCase();
+  if (e.tool) {
+    const tool = meta.appendChild(document.createElement("span"));
+    tool.className = "tool";
+    tool.textContent = String(e.tool);
+  }
+  if (e.anomaly) {
+    const flag = meta.appendChild(document.createElement("span"));
+    flag.className = "badge bad";
+    flag.textContent = "ANOMALY";
+  }
+  for (const text of [e.reason, e.forecast].filter(Boolean)) {
+    const div = li.appendChild(document.createElement("div"));
+    div.className = "summary";
+    div.textContent = String(text).slice(0, 2000);
+  }
+  if (e.provenance?.length) {
+    const div = li.appendChild(document.createElement("div"));
+    div.className = "args";
+    div.textContent = `influenced by: ${e.provenance.join(", ")}`.slice(0, 400);
+  }
+  log.prepend(li);
+  while (log.children.length > 200) log.lastChild.remove();
+}
+
+function connectGuardStream() {
+  const stream = new EventSource("/api/guard/stream");
+  stream.onopen = () => setChip($("guard-conn"), "LISTENING", "ok");
+  stream.onerror = () => setChip($("guard-conn"), "OFFLINE", "warn");
+  stream.onmessage = (m) => addGuardEvent(m.data);
+}
+
 // --- main loop ----------------------------------------------------------------
 
 async function pollLive() {
@@ -252,4 +303,5 @@ function tickClock() {
   setInterval(pollAlarms, 2000);
   setInterval(tickClock, 1000);
   connectAgentStream();
+  connectGuardStream();
 })();

@@ -123,6 +123,7 @@ services:
       SANDBOX_URL: http://sandbox:8000
       REDIS_URL: redis://bus:6379
       MEMORY_DB: /data/memory.sqlite
+      DVAP_DEFENDED: ${DVAP_DEFENDED:-} # 1 boots SafeEnvelope on; the scoreboard also toggles it per challenge
     volumes: [memory-data:/data]
     depends_on:
       plc: { condition: service_healthy }

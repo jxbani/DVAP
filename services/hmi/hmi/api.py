@@ -21,6 +21,7 @@ from dvap_common.plc_tags import INTERLOCKS, STATUS_BITS, flags
 STATIC = Path(__file__).with_name("static")
 REDIS_URL = os.environ.get("REDIS_URL", "redis://bus:6379")
 AGENT_CHANNEL = "agent.events"
+GUARD_CHANNEL = "guard.events"  # SafeEnvelope allow/deny decisions
 
 # Replaced by tests.
 plant = httpx.AsyncClient(base_url=os.environ.get("PLANT_URL", "http://plant-sim:8000"), timeout=2)
@@ -88,15 +89,15 @@ async def events(limit: int = 50) -> dict:
     return await _get(historian, "/events", limit=limit) or {"events": []}
 
 
-async def agent_events() -> AsyncIterator[str | None]:
-    """Yield messages published on the Redis `agent.events` channel, forever.
+async def bus_events(channel: str) -> AsyncIterator[str | None]:
+    """Yield messages published on a Redis channel, forever.
 
     Yields None every 15 s of silence (and while Redis is unreachable) as a keepalive.
     """
     while True:
         try:
             async with redis.from_url(REDIS_URL, decode_responses=True) as bus, bus.pubsub() as pubsub:
-                await pubsub.subscribe(AGENT_CHANNEL)
+                await pubsub.subscribe(channel)
                 while True:
                     message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=15)
                     yield message["data"] if message else None
@@ -113,11 +114,20 @@ def sse(data: str | None) -> str:
     return "".join(f"data: {line}\n" for line in data.splitlines() or [""]) + "\n"
 
 
-@app.get("/api/agent/stream")
-async def agent_stream() -> StreamingResponse:
+def _stream(channel: str) -> StreamingResponse:
     async def body():
         yield sse(None)  # flush headers so the browser sees the stream open
-        async for data in agent_events():
+        async for data in bus_events(channel):
             yield sse(data)
 
     return StreamingResponse(body(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/api/agent/stream")
+async def agent_stream() -> StreamingResponse:
+    return _stream(AGENT_CHANNEL)
+
+
+@app.get("/api/guard/stream")
+async def guard_stream() -> StreamingResponse:
+    return _stream(GUARD_CHANNEL)

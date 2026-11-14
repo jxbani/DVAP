@@ -17,7 +17,8 @@ An intentionally vulnerable, fully simulated industrial plant (water treatment) 
 - mcp-plant: MCP server (official `mcp` Python SDK, FastMCP) exposing operator tools.
 - bus: Redis, used for inter-agent messaging (deliberately unauthenticated in some challenges).
 - scoreboard: challenge engine, reset logic, flags, scoring UI.
-- safeenvelope: (later) policy-enforcing proxy between MCP tools and the PLC.
+- safeenvelope: deterministic policy guard between the MCP tools and the PLC, enforced inline in
+  mcp-plant (see docs/SAFEENVELOPE.md). Off by default; a challenge's defended variant turns it on.
 
 ## Tech conventions
 - Python 3.12, uv, FastAPI, pydantic v2, pymodbus 3.x, asyncua, mcp SDK, redis-py, pytest + pytest-asyncio, ruff, mypy (non-strict).
