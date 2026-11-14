@@ -7,15 +7,22 @@ with a short summary.
 from typing import Literal
 
 from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from mcp_plant.deps import Deps
 from mcp_plant.events import EventBus
 
+# Internal lab network: the agent reaches the server by its docker service name, so the default
+# DNS-rebinding Host check (which would 421 a "mcp-plant" Host header) is turned off.
+_SECURITY = TransportSecuritySettings(enable_dns_rebinding_protection=False)
+
 
 def build_server(deps: Deps, bus: EventBus, lifespan=None) -> FastMCP:
-    mcp = FastMCP("dvap-plant", stateless_http=True, json_response=True, lifespan=lifespan)
+    mcp = FastMCP(
+        "dvap-plant", stateless_http=True, json_response=True, lifespan=lifespan, transport_security=_SECURITY
+    )
 
     @mcp.custom_route("/health", methods=["GET"])
     async def health(_request: Request) -> JSONResponse:
