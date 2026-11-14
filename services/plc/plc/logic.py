@@ -1,6 +1,6 @@
 """PLC control logic: AUTO/MANUAL control plus safety interlocks. Pure, no I/O."""
 
-from dvap_common.plc_tags import INTERLOCKS
+from dvap_common.plc_tags import INTERLOCKS, bitfield, flags
 
 
 def clamp(x: float, lo: float, hi: float) -> float:
@@ -22,7 +22,11 @@ class PI:
 class Controller:
     def __init__(self, cfg: dict, enabled: dict[str, bool]):
         self.cfg = cfg
-        self.enabled = enabled  # interlock name -> enabled at this difficulty
+        # Fallback enables for callers that don't carry them in `mem` (the pure control tests).
+        # The live PLC keeps them in the writable interlock_enable register instead, so an
+        # engineering tool can toggle them at runtime (C03).
+        self.enabled = enabled  # interlock name -> enabled
+        self.default_enable = bitfield([enabled[k] for k in INTERLOCKS])
         self.tripped = dict.fromkeys(INTERLOCKS, False)  # condition present (with hysteresis)
         d, c = cfg["defaults"], cfg["control"]
         self.level_pi = PI(c["level"]["kp"], c["level"]["ki"], 0, 100, start=d["valve_pct"])
@@ -51,7 +55,8 @@ class Controller:
         # DVAP-VULN: C03 - any non-zero value in the maintenance_mode register disables every
         # interlock. The register is writable by anyone on the network, with no authentication.
         bypass = mem["maintenance_mode"] != 0
-        acting = {k: self.tripped[k] and self.enabled[k] and not bypass for k in INTERLOCKS}
+        enabled = flags(mem["interlock_enable"], INTERLOCKS) if "interlock_enable" in mem else self.enabled
+        acting = {k: self.tripped[k] and enabled[k] and not bypass for k in INTERLOCKS}
         if acting["level_hh"]:
             pump = False
         if acting["chlorine_hh"]:

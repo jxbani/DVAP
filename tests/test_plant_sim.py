@@ -155,6 +155,9 @@ client = TestClient(app)  # not used as a context manager, so the tick loop does
 
 
 def test_api():
+    import plant_sim.api as plant_api
+
+    plant_api.plant = Plant()  # other test modules share this singleton; start clean
     assert client.get("/health").json() == {"status": "ok"}
     assert client.get("/state").json()["tank_level_pct"] == 50
     r = client.post("/actuators", json={"drain_valve_pct": 10})

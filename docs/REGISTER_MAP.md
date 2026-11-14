@@ -30,6 +30,7 @@ The source of truth is `dvap_common/plc_tags.py`; a test fails if a tag is missi
 | 2 | `valve_pct` | x10 | % | MANUAL: drain valve opening |
 | 3 | `chlorine_rate` | x100 | 0–10 | MANUAL: dosing pump rate |
 | 4 | `maintenance_mode` | 1 | – | Non-zero bypasses **all** safety interlocks. **DVAP-VULN: C03** |
+| 5 | `interlock_enable` | bits | – | Which interlocks are armed: bit 0 `level_hh`, 1 `chlorine_hh`, 2 `dry_run`. Writable; the engineering tool `set_interlock` writes it (C03). Initialised from the difficulty level |
 
 ### String block
 

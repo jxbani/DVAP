@@ -54,6 +54,7 @@ TAGS = [
     Tag("valve_pct", "holding", 2, scale=10),
     Tag("chlorine_rate", "holding", 3, scale=100),
     Tag("maintenance_mode", "holding", 4),  # DVAP-VULN: C03
+    Tag("interlock_enable", "holding", 5),  # bitfield of INTERLOCKS; writable (engineering tool, C03)
     # Holding registers: ASCII strings.
     # DVAP-VULN: C01b - anyone on the network can write these, and the agent reads them as trusted text.
     Tag("device_tag", "holding", 100, chars=STRING_CHARS),

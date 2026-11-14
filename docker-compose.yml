@@ -72,11 +72,81 @@ services:
     ports: ["127.0.0.1:8080:8000"] # loopback only, never 0.0.0.0
     healthcheck: *healthcheck
 
+  # Diagnostic sandbox. The blast radius for run_diagnostic command injection (C05).
+  # On `sandbox-net` only: it cannot reach the plant, cmms, the bus or the internet.
+  sandbox:
+    build: { context: ., args: { SERVICE: sandbox, PACKAGE: sandbox } }
+    networks: [sandbox-net]
+    healthcheck: *healthcheck
+
+  # MCP server: the only way the agent touches the plant. Internal network only.
+  mcp-plant:
+    build: { context: ., args: { SERVICE: mcp-plant, PACKAGE: mcp_plant, MODULE: main } }
+    environment:
+      PLC_HOST: plc
+      CMMS_URL: http://cmms:8000
+      HISTORIAN_URL: http://historian:8000
+      SANDBOX_URL: http://sandbox:8000
+      REDIS_URL: redis://bus:6379
+      MEMORY_DB: /data/memory.sqlite
+    volumes: [memory-data:/data]
+    depends_on:
+      plc: { condition: service_healthy }
+      cmms: { condition: service_healthy }
+      historian: { condition: service_healthy }
+      sandbox: { condition: service_healthy }
+      bus: { condition: service_healthy }
+    networks: [plant, sandbox-net] # sandbox-net only to reach the sandbox
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # The victim LLM agent. Talks to the plant only through mcp-plant.
+  agent-operator:
+    build: { context: ., args: { SERVICE: agent-operator, PACKAGE: agent_operator, MODULE: api } }
+    environment:
+      MCP_URL: http://mcp-plant:8000/mcp
+      REDIS_URL: redis://bus:6379
+      MODEL: ${MODEL:-ollama/qwen2.5:7b-instruct}
+      OLLAMA_API_BASE: ${OLLAMA_API_BASE:-http://ollama:11434}
+      AGENT_CYCLE_SECONDS: ${AGENT_CYCLE_SECONDS:-30}
+      # For a hosted model instead of Ollama, set MODEL (e.g. anthropic/claude-3-5-sonnet)
+      # and pass the key through, e.g. ANTHROPIC_API_KEY or OPENAI_API_KEY.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    depends_on:
+      mcp-plant: { condition: service_healthy }
+    networks: [plant]
+    healthcheck: *healthcheck
+
+  # Local LLM. Pull the model once: docker compose exec ollama ollama pull qwen2.5:7b-instruct
+  # On `edge` as well as `plant` because pulling a model needs internet; runs on CPU unless a
+  # GPU is wired in (uncomment the deploy block). The agent then runs fully offline.
+  ollama:
+    image: ollama/ollama:latest
+    volumes: [ollama-models:/root/.ollama]
+    networks: [plant, edge]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices: [{ driver: nvidia, count: all, capabilities: [gpu] }]
+
 networks:
   plant:
     internal: true # no route to the host or the internet
   edge: {}
+  sandbox-net:
+    internal: true # isolates the diagnostic sandbox from everything but mcp-plant
 
 volumes:
   historian-data: # cleared by `make reset`
   cmms-data: # cleared by `make reset`, which re-seeds the 10 benign tickets
+  memory-data: # the agent's long-term memory; cleared by `make reset`
+  ollama-models: # downloaded LLM weights (kept across `make reset`)

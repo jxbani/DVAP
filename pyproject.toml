@@ -6,6 +6,8 @@ dependencies = [
     "asyncua>=2.1.0",
     "fastapi>=0.162.7",
     "httpx>=0.28.1",
+    "litellm>=1.109.1",
+    "mcp>=1.12,<2",
     "pydantic>=2",
     "pymodbus>=3,<4",
     "pyyaml>=6.0.3",
@@ -23,10 +25,10 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = [".", "services/plant-sim", "services/plc", "services/historian", "services/hmi", "services/cmms", "services/agent-operator"]
+pythonpath = [".", "services/plant-sim", "services/plc", "services/historian", "services/hmi", "services/cmms", "services/agent-operator", "services/mcp-plant", "services/sandbox"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
 line-length = 110
-src = [".", "services/plant-sim", "services/plc", "services/historian", "services/hmi", "services/cmms", "services/agent-operator"]
+src = [".", "services/plant-sim", "services/plc", "services/historian", "services/hmi", "services/cmms", "services/agent-operator", "services/mcp-plant", "services/sandbox"]

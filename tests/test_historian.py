@@ -92,7 +92,7 @@ def test_blocks_cover_the_map_within_modbus_limits():
     runs = blocks()
     assert [(table, addr, count) for table, addr, count, _ in runs] == [
         ("coil", 0, 4),
-        ("holding", 0, 5),
+        ("holding", 0, 6),
         ("holding", 100, 96),
         ("input", 0, 9),
     ]

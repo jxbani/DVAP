@@ -54,6 +54,7 @@ class Plc:
 
         # PLC memory in engineering units: the single source of truth for both protocols.
         self.mem: dict = {t.name: "" if t.chars else 0 for t in TAGS} | cfg["defaults"]
+        self.mem["interlock_enable"] = self.controller.default_enable  # from the difficulty level
         # What each protocol last held, to detect writes made by clients.
         self._modbus_seen = {t.name: t.encode(self.mem[t.name]) for t in TAGS}
         self._opcua_seen = dict(self.mem)
@@ -147,7 +148,7 @@ class Plc:
                 [outputs["inflow_pump_on"], *acting.values(), self.mem["maintenance_mode"] != 0]
             ),
             "incidents": bitfield([name in active for name in INCIDENT_BITS]),
-            "interlocks_enabled": bitfield([self.enabled[k] for k in INTERLOCKS]),
+            "interlocks_enabled": self.mem["interlock_enable"],  # mirror of the writable register
         }
         await self._publish()
 

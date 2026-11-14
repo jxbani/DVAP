@@ -7,29 +7,11 @@ import time
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
 
-from dvap_common.plc_tags import INCIDENT_BITS, STATUS_BITS, blocks, flags
+from dvap_common.plc_client import read_all
+from dvap_common.plc_tags import INCIDENT_BITS, STATUS_BITS, flags
 from historian.store import Store
 
 log = logging.getLogger("historian")
-
-
-async def read_tags(client: AsyncModbusTcpClient) -> dict:
-    """Read every tag in the register map and decode it to engineering units."""
-    readers = {
-        "coil": client.read_coils,
-        "holding": client.read_holding_registers,
-        "input": client.read_input_registers,
-    }
-    values = {}
-    for table, address, count, tags in blocks():
-        r = await readers[table](address, count=count)
-        if r.isError():
-            raise ConnectionError(f"Modbus read {table}@{address} failed: {r}")
-        raw = r.bits if table == "coil" else r.registers
-        for tag in tags:
-            offset = tag.address - address
-            values[tag.name] = tag.decode(raw[offset : offset + tag.length])
-    return values
 
 
 def detect_events(prev: dict, cur: dict) -> list[tuple[str, str, str]]:
@@ -63,7 +45,7 @@ class Collector:
 
     async def poll(self, client: AsyncModbusTcpClient, ts: float | None = None) -> None:
         ts = time.time() if ts is None else ts
-        values = await read_tags(client)
+        values = await read_all(client)
         numeric = {k: float(v) for k, v in values.items() if not isinstance(v, str)}
         self.store.record(ts, numeric, detect_events(self.latest, values))
         self.latest, self.latest_ts = values, ts
