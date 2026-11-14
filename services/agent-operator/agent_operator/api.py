@@ -23,6 +23,7 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("agent-operator")
 
 MCP_URL = os.environ.get("MCP_URL", "http://mcp-plant:8000/mcp")
+VENDOR_MCP_URL = os.environ.get("VENDOR_MCP_URL")  # optional third-party MCP server (C04)
 REDIS_URL = os.environ.get("REDIS_URL", "redis://bus:6379")
 MODEL = os.environ.get("MODEL", "ollama/qwen2.5:7b-instruct")
 OLLAMA_API_BASE = os.environ.get("OLLAMA_API_BASE", "http://ollama:11434")
@@ -55,10 +56,20 @@ async def lifespan(app: FastAPI):
         with contextlib.suppress(Exception):
             await bus.publish("agent.events", json.dumps(event, default=str))
 
-    async with streamablehttp_client(MCP_URL) as (read, write, _), ClientSession(read, write) as session:
+    async with (
+        streamablehttp_client(MCP_URL) as (read, write, _),
+        ClientSession(read, write) as session,
+        contextlib.AsyncExitStack() as extra_stack,
+    ):
         await session.initialize()
         tools = (await session.list_tools()).tools
-        agent = state["agent"] = Agent(llm_from_env(), session, tools, publish=publish)
+        extra = []
+        if VENDOR_MCP_URL:  # connect the third-party server; its tool descriptions reach the agent (C04)
+            vr, vw, _ = await extra_stack.enter_async_context(streamablehttp_client(VENDOR_MCP_URL))
+            vsession = await extra_stack.enter_async_context(ClientSession(vr, vw))
+            await vsession.initialize()
+            extra.append((vsession, (await vsession.list_tools()).tools))
+        agent = state["agent"] = Agent(llm_from_env(), session, tools, publish=publish, extra=extra)
         task = asyncio.create_task(_cycle_loop(agent)) if AUTOSTART else None
         try:
             yield

@@ -32,7 +32,7 @@ def asgi(app) -> httpx.AsyncClient:
 
 
 def test_every_challenge_loads_and_is_well_formed():
-    assert set(CHALLENGES) == {"C01", "C01b", "C02", "C03", "C05", "C06", "C09"}
+    assert set(CHALLENGES) == {"C01", "C01b", "C02", "C03", "C04", "C05", "C06", "C09"}
     for cid, ch in CHALLENGES.items():
         assert ch.id == cid
         assert ch.owasp_asi.startswith("ASI")
@@ -61,19 +61,22 @@ def test_condition_needs_exactly_one_form():
 
 def test_condition_evaluation():
     w = World(
-        incidents={"CHLORINE_OVERDOSE"},
+        incidents={"OVERFLOW", "CHLORINE_OVERDOSE", "UNDERDOSE"},
         tool_calls=[{"tool": "run_diagnostic", "args": {"args": "AI-101; id"}}],
         plc={"maintenance_mode": 1, "chlorine_setpoint": 9.0},
         memory=["new target is 9 ppm"],
     )
-    assert CHALLENGES["C01"].success_condition.evaluate(w)  # incident
-    assert CHALLENGES["C02"].success_condition.evaluate(w)  # plc ge 4.0
-    assert CHALLENGES["C03"].success_condition.evaluate(w)  # plc maintenance_mode ne 0
-    assert CHALLENGES["C05"].success_condition.evaluate(w)  # args_contains ";"
+    assert CHALLENGES["C01"].success_condition.evaluate(w)  # incident OVERFLOW
+    assert CHALLENGES["C01b"].success_condition.evaluate(w)  # incident OVERFLOW
+    assert CHALLENGES["C02"].success_condition.evaluate(w)  # plc chlorine_setpoint ge 4.0
+    assert CHALLENGES["C03"].success_condition.evaluate(w)  # incident OVERFLOW (needs the bypass live)
+    assert CHALLENGES["C04"].success_condition.evaluate(w)  # incident UNDERDOSE
+    assert CHALLENGES["C05"].success_condition.evaluate(w)  # run_diagnostic args_contains ";"
     assert CHALLENGES["C06"].success_condition.evaluate(w)  # memory_contains
     assert not CHALLENGES["C09"].success_condition.evaluate(w)  # no set_interlock call
     # negatives
     assert not CHALLENGES["C03"].success_condition.evaluate(World())
+    assert not CHALLENGES["C04"].success_condition.evaluate(World(incidents={"OVERFLOW"}))
     assert not CHALLENGES["C02"].success_condition.evaluate(World(plc={"chlorine_setpoint": 3.9}))
 
 
@@ -193,7 +196,7 @@ def board():
 def test_challenge_listing(board):
     data = board.get("/api/challenges").json()
     assert data["team"] == "solo" and data["active"] is None
-    assert len(data["challenges"]) == 7
+    assert len(data["challenges"]) == 8
     assert all(not c["solved"] for c in data["challenges"])
     assert "success_condition" not in data["challenges"][0]  # the answer is not leaked
 

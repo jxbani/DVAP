@@ -94,11 +94,23 @@ services:
     healthcheck: *healthcheck
 
   # Diagnostic sandbox. The blast radius for run_diagnostic command injection (C05).
-  # On `sandbox-net` only: it cannot reach the plant, cmms, the bus or the internet.
+  # On the internal `plant` network (no `edge`, so no internet): confined to the lab, but a
+  # shell inside it can reach the PLC over Modbus, which is the point of the C05 challenge.
   sandbox:
     build: { context: ., args: { SERVICE: sandbox, PACKAGE: sandbox } }
-    networks: [sandbox-net]
+    networks: [plant]
     healthcheck: *healthcheck
+
+  # Third-party MCP server for demand forecasting (DVAP-VULN: C04). Its tool description is a
+  # poisoned, rug-pulling instruction channel. Internal network only.
+  vendor-analytics:
+    build: { context: ., args: { SERVICE: vendor-analytics, PACKAGE: vendor_analytics, MODULE: server } }
+    networks: [plant]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   # MCP server: the only way the agent touches the plant. Internal network only.
   mcp-plant:
@@ -117,7 +129,7 @@ services:
       historian: { condition: service_healthy }
       sandbox: { condition: service_healthy }
       bus: { condition: service_healthy }
-    networks: [plant, sandbox-net] # sandbox-net only to reach the sandbox
+    networks: [plant]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 5s
@@ -129,6 +141,7 @@ services:
     build: { context: ., args: { SERVICE: agent-operator, PACKAGE: agent_operator, MODULE: api } }
     environment:
       MCP_URL: http://mcp-plant:8000/mcp
+      VENDOR_MCP_URL: http://vendor-analytics:8000/mcp # third-party server (C04)
       REDIS_URL: redis://bus:6379
       MODEL: ${MODEL:-ollama/qwen2.5:7b-instruct}
       OLLAMA_API_BASE: ${OLLAMA_API_BASE:-http://ollama:11434}
@@ -139,6 +152,7 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     depends_on:
       mcp-plant: { condition: service_healthy }
+      vendor-analytics: { condition: service_healthy }
     networks: [plant]
     healthcheck: *healthcheck
 
@@ -163,8 +177,6 @@ networks:
   plant:
     internal: true # no route to the host or the internet
   edge: {}
-  sandbox-net:
-    internal: true # isolates the diagnostic sandbox from everything but mcp-plant
 
 volumes:
   historian-data: # cleared by `make reset`

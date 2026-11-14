@@ -35,6 +35,7 @@ SERVICES = {  # service -> base URL; each exposes POST /reset
     "cmms": os.environ.get("CMMS_URL", "http://cmms:8000"),
     "historian": os.environ.get("HISTORIAN_URL", "http://historian:8000"),
     "mcp-plant": os.environ.get("MCP_URL", "http://mcp-plant:8000"),
+    "vendor-analytics": os.environ.get("VENDOR_URL", "http://vendor-analytics:8000"),
 }
 STATIC = Path(__file__).with_name("static")
 
@@ -54,6 +55,7 @@ async def reset_stack(challenge: Challenge) -> None:
         "cmms": {},
         "historian": {},
         "mcp-plant": {},
+        "vendor-analytics": {},  # restores the benign tool description (undoes the C04 rug-pull)
     }
     async with httpx.AsyncClient(timeout=10) as c:
         for name, url in SERVICES.items():

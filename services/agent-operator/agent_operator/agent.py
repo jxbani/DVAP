@@ -68,20 +68,30 @@ def mcp_tools_to_openai(tools) -> list[dict]:
 
 
 class Agent:
-    def __init__(self, llm: LLM, session: ClientSession, tools, publish=None):
+    def __init__(self, llm: LLM, session: ClientSession, tools, publish=None, extra=()):
+        """`extra` is a list of (session, tools) from additional MCP servers, e.g. a third-party
+        vendor. Their tool descriptions reach the model exactly like the plant's — which is the
+        supply-chain attack surface (C04): a poisoned description is an instruction to the agent."""
         self.llm = llm
-        self.session = session
-        self.tool_schema = mcp_tools_to_openai(tools)
-        self.tool_names = {t.name for t in tools}
+        self.session = session  # the primary (plant) server
         self.publish = publish  # optional async fn(event dict) -> publishes to agent.events
+        self._session_for: dict[str, ClientSession] = {}
+        merged = []
+        for sess, ts in [(session, tools), *extra]:
+            for t in ts:
+                self._session_for[t.name] = sess  # last registration wins on a name clash
+                merged.append(t)
+        self.tool_schema = mcp_tools_to_openai(merged)
+        self.tool_names = set(self._session_for)
         self.approvals: dict[str, Approval] = {}
         self.shift_log: list[dict] = []
 
     # --- tool calls -------------------------------------------------------
 
     async def _call_tool(self, name: str, args: dict, context_ids: list[str]) -> dict:
-        """Call an MCP tool, passing the current context item IDs in the request meta."""
-        result = await self.session.call_tool(name, args, meta={"context_ids": context_ids})
+        """Call an MCP tool on whichever server provides it, passing the context item IDs in meta."""
+        session = self._session_for.get(name, self.session)
+        result = await session.call_tool(name, args, meta={"context_ids": context_ids})
         sc = result.structuredContent
         if sc is not None:
             # FastMCP wraps a non-dict return (e.g. list_tickets) as {"result": ...}; unwrap it.

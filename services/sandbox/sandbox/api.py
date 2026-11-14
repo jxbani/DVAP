@@ -1,8 +1,9 @@
 """Diagnostic sandbox. Runs fixed diagnostic scripts for the operator agent.
 
-This container is the blast radius for DVAP-VULN: C05. It is deliberately isolated:
-it has no network access (see docker-compose.yml), holds no secrets, and nothing of the
-plant lives here. Running a diagnostic can only ever affect this throwaway container.
+This container is the blast radius for DVAP-VULN: C05. It runs on the internal `plant` network
+(no internet), so an injected command stays inside the lab — but, deliberately, a shell here can
+reach the PLC over Modbus and write a coil directly. That is the point of C05: code execution with
+a network path to the process, bypassing the agent's reasoning.
 """
 
 import asyncio
