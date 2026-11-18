@@ -1,10 +1,11 @@
 # Releasing DVAP
 
-A release is a `vX.Y.Z` tag. Pushing it runs `.github/workflows/release.yml`, which:
+A release is a `vX.Y.Z` tag, or a pre-release tag `vX.Y.Z-alpha.N`, `-beta.N` or `-rc.N`. Pushing
+it runs `.github/workflows/release.yml`, which:
 
 1. checks that the tag, `version` in `pyproject.toml`, `DVAP_VERSION` in `.env.example` and a
-   `## [X.Y.Z] - <date>` section in `CHANGELOG.md` all agree (it stops before publishing anything
-   if not);
+   `## [X.Y.Z] - <date>` section in `CHANGELOG.md` all agree (`scripts/release_version.py`; it
+   stops before publishing anything if not);
 2. builds each DVAP image for linux/amd64 and linux/arm64 and pushes it to
    `ghcr.io/<owner>/dvap-<service>:X.Y.Z`;
 3. signs each image by digest with cosign (keyless: the signature is bound to this workflow's
@@ -12,6 +13,26 @@ A release is a `vX.Y.Z` tag. Pushing it runs `.github/workflows/release.yml`, wh
 4. attaches a build-provenance attestation to each image, and generates an SPDX SBOM for it with syft;
 5. creates the GitHub Release: the CHANGELOG section as notes, plus `dvap-X.Y.Z.zip` (with its own
    provenance attestation) and the eleven SBOMs as assets.
+
+Images are only ever tagged with their exact version, never `latest` or `stable`.
+
+### Pre-releases
+
+`v0.9.0-beta.1` and the like publish everything above, marked as a GitHub **pre-release** that is
+never "Latest": `releases/latest` and the README's release badge keep pointing at the last stable
+release (before the first one, the badge shows none).
+
+DVAP's version is SemVer everywhere except `pyproject.toml`, which needs PEP 440. Python
+packaging rewrites `0.9.0-beta.1` to `0.9.0b1` anyway (`uv.lock` shows it), and silently turns
+labels it doesn't know into something else (`-preview.1` becomes `rc1`). So the mapping is
+explicit, and these are the only pre-release labels allowed:
+
+| Tag, `.env.example`, CHANGELOG, image | `pyproject.toml` |
+|---|---|
+| `X.Y.Z` | `X.Y.Z` |
+| `X.Y.Z-alpha.N` | `X.Y.ZaN` |
+| `X.Y.Z-beta.N` | `X.Y.ZbN` |
+| `X.Y.Z-rc.N` | `X.Y.ZrcN` |
 
 ## Before the first release (once)
 
@@ -31,12 +52,13 @@ Releases come from `main`, with CI green.
 
 1. Pick the version (Semantic Versioning; see the note at the top of CHANGELOG.md for what counts as
    breaking for a challenge).
-2. Bump it in both places:
-   - `pyproject.toml`: `version = "X.Y.Z"`, then run `uv lock` (the lock records the project version);
-   - `.env.example`: `DVAP_VERSION=X.Y.Z`.
-
-   `tests/test_lab_safety.py` checks that the compose defaults match.
-   Also update the default in `docker-compose.yml` (`${DVAP_VERSION:-X.Y.Z}`, 11 places).
+2. Bump it everywhere:
+   - `pyproject.toml`: `version = "X.Y.Z"`, in its PEP 440 form for a pre-release (`0.9.0b1`, see
+     the table above), then run `uv lock` (the lock records the project version);
+   - `.env.example`: `DVAP_VERSION=X.Y.Z` (SemVer: `0.9.0-beta.1`);
+   - `docker-compose.yml`: the default `${DVAP_VERSION:-X.Y.Z}`, 11 places
+     (`tests/test_lab_safety.py` checks them);
+   - `CITATION.cff`: `version` and `date-released`.
 3. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` (today, UTC), add a
    fresh empty `## [Unreleased]` above it, and update the links at the bottom:
    ```
@@ -46,7 +68,8 @@ Releases come from `main`, with CI green.
 4. Check it locally:
    ```bash
    uv run pytest
-   python3 scripts/make_dist.py X.Y.Z     # the zip the release will attach, in dist/
+   python3 scripts/release_version.py vX.Y.Z   # what the release's verify job checks
+   python3 scripts/make_dist.py X.Y.Z          # the zip the release will attach, in dist/
    ```
 5. Commit (`Release X.Y.Z`), open a PR, and merge it once CI is green.
 6. Tag the merge commit on `main` and push the tag:
@@ -67,7 +90,7 @@ Releases come from `main`, with CI green.
    and that doctor reports the missing Docker. The same check runs weekly, and by hand from the
    Actions tab for any tag. On any machine with Docker:
    ```bash
-   scripts/verify_fresh_install.sh                     # the latest release
+   scripts/verify_fresh_install.sh                     # the latest release (or, before any, the newest pre-release)
    DVAP_TAG=vX.Y.Z scripts/verify_fresh_install.sh     # a given one
    ```
 

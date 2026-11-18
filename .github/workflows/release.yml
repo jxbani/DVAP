@@ -1,13 +1,18 @@
 name: Release
 
-# On a v<major>.<minor>.<patch> tag: build DVAP's images for linux/amd64 + linux/arm64, push them to
+# On a v<major>.<minor>.<patch> tag, or a SemVer pre-release tag (v0.9.0-beta.1, v1.0.0-rc.1): build
+# DVAP's images for linux/amd64 + linux/arm64, push them to
 # ghcr.io/<owner>/dvap-<service>:<version> (the names docker-compose.yml pulls), sign them with
 # cosign (keyless, GitHub OIDC), attach an SPDX SBOM and a build-provenance attestation to each,
 # and publish a GitHub Release with the CHANGELOG section as notes plus dvap-<version>.zip, which
 # runs the lab without cloning. The exact steps for a maintainer: docs/RELEASING.md.
+#
+# Pre-releases (-alpha.N, -beta.N, -rc.N) are published as a GitHub pre-release, never marked
+# latest. Images of every release are tagged with their version only: never `latest` or `stable`.
 on:
   push:
-    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+    # Filter patterns, not regexes; the verify job checks the exact form (scripts/release_version.py).
+    tags: ["v[0-9]+.[0-9]+.[0-9]+", "v[0-9]+.[0-9]+.[0-9]+-*"]
 
 permissions:
   contents: read
@@ -22,20 +27,17 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.v.outputs.version }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
       owner: ${{ steps.v.outputs.owner }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
       - id: v
+        # SemVer tag vs PEP 440 pyproject.toml (0.9.0-beta.1 <-> 0.9.0b1), .env.example and CHANGELOG.md
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          py=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml)
-          env=$(sed -n 's/^DVAP_VERSION=//p' .env.example)
-          [ "$py" = "$version" ] || { echo "::error::pyproject.toml says $py, tag says $version"; exit 1; }
-          [ "$env" = "$version" ] || { echo "::error::.env.example DVAP_VERSION is $env, tag says $version"; exit 1; }
-          grep -q "^## \[$version\] - " CHANGELOG.md || { echo "::error::CHANGELOG.md has no '## [$version] - <date>' section"; exit 1; }
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if ! out=$(python3 scripts/release_version.py "$GITHUB_REF_NAME"); then echo "$out"; exit 1; fi
+          echo "$out" | tee -a "$GITHUB_OUTPUT"
           echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
 
   images:
@@ -87,6 +89,7 @@ jobs:
             SERVICE=${{ matrix.service.name }}
             PACKAGE=${{ matrix.service.package }}
             MODULE=${{ matrix.service.module }}
+          # The version only, for every release: never `latest` or `stable`, so a pre-release can't move them.
           tags: ${{ env.IMAGE }}:${{ env.VERSION }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
@@ -131,6 +134,7 @@ jobs:
       attestations: write
     env:
       VERSION: ${{ needs.verify.outputs.version }}
+      PRERELEASE: ${{ needs.verify.outputs.prerelease }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -142,17 +146,24 @@ jobs:
           merge-multiple: true
       - name: Release notes from CHANGELOG.md
         run: |
-          awk -v h="## [$VERSION]" 'index($0, h) == 1 {on=1; next} index($0, "## [") == 1 {on=0} on' CHANGELOG.md > notes.md
+          awk -v h="## [$VERSION]" 'index($0, h) == 1 {on=1; next} index($0, "## [") == 1 || /^\[[^]]*\]: / {on=0} on' CHANGELOG.md > notes.md
           [ -s notes.md ] || { echo "::error::empty CHANGELOG section for $VERSION"; exit 1; }
           printf '\n---\nImages: `ghcr.io/%s/dvap-<service>:%s` (linux/amd64, linux/arm64), signed with cosign (keyless); verify with docs/RELEASING.md.\n' \
             "${GITHUB_REPOSITORY_OWNER,,}" "$VERSION" >> notes.md
+          if [ "$PRERELEASE" = true ]; then
+            printf '\n**Pre-release** for testing; expect changes before %s.\n' "${VERSION%%-*}" >> notes.md
+          fi
       - name: dvap-${{ env.VERSION }}.zip (run without cloning)
         run: python3 scripts/make_dist.py "$VERSION"
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: dist/dvap-${{ env.VERSION }}.zip
       - name: Create the release
-        run: gh release create "v$VERSION" --title "DVAP $VERSION" --notes-file notes.md --verify-tag "dist/dvap-$VERSION.zip" sboms/*.spdx.json
+        # A pre-release is marked as one and never becomes "Latest" (the README badge and /releases/latest).
+        run: |
+          if [ "$PRERELEASE" = true ]; then kind=(--prerelease --latest=false); else kind=(--latest); fi
+          gh release create "v$VERSION" "${kind[@]}" --title "DVAP $VERSION" --notes-file notes.md --verify-tag \
+            "dist/dvap-$VERSION.zip" sboms/*.spdx.json
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
