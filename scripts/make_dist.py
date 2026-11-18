@@ -1,18 +1,26 @@
 """Build dist/dvap-<version>.zip: everything needed to run DVAP from the published images,
 without cloning (the release workflow attaches it to the GitHub Release).
 
-    python3 scripts/make_dist.py 0.1.0
+    python3 scripts/make_dist.py 0.9.0-beta.1
+
+The version is DVAP's SemVer version (pre-releases too), and must be .env.example's DVAP_VERSION:
+the zip's .env.example decides which images it pulls.
 """
 
+import re
 import sys
 import zipfile
 from pathlib import Path
+
+if __package__ in (None, ""):  # run as a script: make scripts.release_version importable
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from scripts.release_version import parse
 
 ROOT = Path(__file__).resolve().parent.parent
 FILES = [
     "dvap", "dvap.ps1", "docker-compose.yml", "docker-compose.api.yml", ".env.example",
     "gateway/nginx.conf",  # mounted by the gateway service
-    "bench/__init__.py", "bench/__main__.py", "bench/cli.py", "bench/ops.py", "bench/doctor.py",
+    "bench/__init__.py", "bench/__main__.py", "bench/cli.py", "bench/ops.py", "bench/doctor.py", "bench/stage.py",
     "README.md", "LICENSE", "CHANGELOG.md",
 ]
 EXECUTABLE = {"dvap"}
@@ -35,7 +43,19 @@ def build(version: str, out: Path = ROOT / "dist") -> Path:
     return target
 
 
+def check_version(version: str) -> None:
+    parse(version)  # ValueError unless X.Y.Z or X.Y.Z-(alpha|beta|rc).N
+    env = re.search(r"^DVAP_VERSION=(.*)$", (ROOT / ".env.example").read_text(encoding="utf-8"), re.MULTILINE)
+    if not env or env.group(1).strip() != version:
+        raise ValueError(f".env.example has DVAP_VERSION={env.group(1) if env else None}, not {version}: "
+                         "the zip would pull other images")
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         sys.exit(__doc__)
+    try:
+        check_version(sys.argv[1])
+    except ValueError as e:
+        sys.exit(f"make_dist: {e}")
     print(build(sys.argv[1]))

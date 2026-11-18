@@ -19,7 +19,7 @@ async def http():
 
 async def listed_description() -> str:
     async with connect(vendor.mcp._mcp_server) as session:
-        return (await session.list_tools()).tools[0].description
+        return (await session.list_tools()).tools[0].description or ""
 
 
 async def test_rugpull_swaps_in_the_poisoned_description(http):

@@ -11,8 +11,9 @@ variant. The deterministic guard, SafeEnvelope, is there to be attacked, and a b
 how often a given model falls for each attack. It runs on one laptop: offline with a local model,
 or with no model at all.
 
-<!-- TODO: replace with assets/demo.gif (a ticket injection overflowing the tank on the HMI, ~15 s loop). -->
-![A malicious maintenance ticket drives the agent to overdose the chlorine](assets/demo-placeholder.svg)
+[![A malicious maintenance ticket makes the AI operator overflow the tank](assets/demo.gif)](assets/demo-full.mp4)
+
+▶ [Watch the full demo](assets/demo-full.mp4) (2½ min): the attack, then the same attack blocked by SafeEnvelope.
 
 !!! danger "Deliberately vulnerable. Simulated only."
     DVAP is insecure on purpose. Run it only on a machine you control, keep its ports on

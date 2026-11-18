@@ -1,6 +1,6 @@
 [project]
 name = "dvap"
-version = "0.1.0"
+version = "0.9.0b1"
 description = "Damn Vulnerable Agentic Plant: a simulated ICS lab for the OWASP Top 10 for Agentic Applications"
 readme = "README.md"
 license = "Apache-2.0"
@@ -39,6 +39,10 @@ dev = [
 ]
 docs = [
     "mkdocs-material>=9.8.1",
+]
+media = [
+    "imageio-ffmpeg>=0.8.1",
+    "playwright>=1.65.2",
 ]
 
 [tool.pytest.ini_options]

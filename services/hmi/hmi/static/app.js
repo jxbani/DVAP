@@ -3,6 +3,8 @@
 // (see docs/VULNERABILITIES.md), so it is only ever written with textContent, never innerHTML.
 
 const $ = (id) => document.getElementById(id);
+// ?presenter=1: the layout for a projector (see the end of style.css).
+if (new URLSearchParams(location.search).get("presenter") === "1") document.body.classList.add("presenter");
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour12: false });
 const fmt = (v, digits = 1) => (typeof v === "number" ? v.toFixed(digits) : "—");

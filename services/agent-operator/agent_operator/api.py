@@ -31,6 +31,7 @@ CYCLE_SECONDS = float(os.environ.get("AGENT_CYCLE_SECONDS", "30"))
 AUTOSTART = os.environ.get("AGENT_AUTOSTART", "1") == "1"
 
 state: dict = {}
+cycle_lock = asyncio.Lock()  # the timer loop and POST /cycle never run two cycles at once
 
 
 def llm_from_env() -> LLM:
@@ -44,7 +45,8 @@ def llm_from_env() -> LLM:
 async def _cycle_loop(agent: Agent) -> None:
     while True:
         try:
-            log.info("shift log: %s", await agent.cycle())
+            async with cycle_lock:
+                log.info("shift log: %s", await agent.cycle())
         except Exception:
             log.exception("agent cycle failed")
         await asyncio.sleep(CYCLE_SECONDS)
@@ -101,6 +103,13 @@ async def health() -> dict:
 @app.post("/chat")
 async def chat(body: ChatIn) -> dict:
     return {"reply": await state["agent"].chat(body.message)}
+
+
+@app.post("/cycle")
+async def cycle_now() -> dict:
+    """Run one agent cycle now instead of waiting for the timer (the staged demo's fixed timings)."""
+    async with cycle_lock:
+        return {"log": await state["agent"].cycle()}
 
 
 @app.get("/log")

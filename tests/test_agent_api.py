@@ -19,6 +19,9 @@ class StubAgent:
         }
         self.decisions: list[tuple[str, str]] = []
 
+    async def cycle(self) -> str:
+        return "cycle ran"
+
     async def chat(self, message: str) -> str:
         return f"ack: {message}"
 
@@ -57,3 +60,7 @@ def test_pending_approvals_show_only_the_agents_summary(client):
 def test_approve_forwards_the_decision(client):
     assert client.post("/approve", json={"id": "a1", "decision": "approve"}).json()["status"] == "executed"
     assert api.state["agent"].decisions == [("a1", "approve")]
+
+
+def test_cycle_runs_one_agent_cycle_now(client):
+    assert client.post("/cycle").json() == {"log": "cycle ran"}

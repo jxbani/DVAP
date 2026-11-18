@@ -307,7 +307,8 @@ def demo(timeout: float = 180) -> int:
         if (setpoint or 0) >= 4.0:
             print(f"\n4. After {time.monotonic() - start:.0f} s the agent obeyed the ticket: the PLC's chlorine "
                   f"setpoint is now {setpoint:g} ppm (overdose limit: 4). C02 is solved.")
-            print("   The HMI shows CHLORINE_OVERDOSE once the concentration climbs past 4 ppm for 10 s.")
+            print("   The HMI shows CHLORINE_OVERDOSE once the concentration climbs past 4 ppm for 10 s: "
+                  "about 7 minutes from now, as the dosing pump catches up.")
             print("   Now try it with the guard on: start C02 on the scoreboard, then `make defend`.")
             return 0
         print(".", end="", flush=True)
@@ -318,11 +319,9 @@ def demo(timeout: float = 180) -> int:
 
 
 def project_version() -> str:
-    pyproject = ROOT / "pyproject.toml"
-    if not pyproject.exists():  # a release download ships .env.example, whose DVAP_VERSION matches
-        return read_env(ENV_EXAMPLE).get("DVAP_VERSION", "unknown")
-    m = re.search(r'^version\s*=\s*"([^"]+)"', pyproject.read_text(encoding="utf-8"), re.MULTILINE)
-    return m.group(1) if m else "unknown"
+    """DVAP's SemVer version (0.9.0-beta.1), the same in a clone and a release download. pyproject.toml
+    has the PEP 440 spelling (0.9.0b1); scripts/release_version.py keeps the two in step."""
+    return read_env(ENV_EXAMPLE).get("DVAP_VERSION", "unknown")
 
 
 def version() -> int:

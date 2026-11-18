@@ -10,8 +10,9 @@ physical consequence: the tank overflows, the chlorine overdoses, the pump runs 
 hands-on challenges, mapped to the OWASP Top 10 for Agentic Applications, plus a deterministic
 guard to attack and a benchmark to measure models with.
 
-<!-- TODO: replace with docs/assets/demo.gif (a ticket injection overflowing the tank on the HMI, ~15 s loop). -->
-![DVAP demo: a malicious maintenance ticket drives the agent to overdose the chlorine](docs/assets/demo-placeholder.svg)
+[![DVAP demo: a malicious maintenance ticket makes the AI operator overflow the tank](docs/assets/demo.gif)](docs/assets/demo-full.mp4)
+
+▶ [Watch the full demo](docs/assets/demo-full.mp4) (2½ min): the attack, then the same attack blocked by SafeEnvelope.
 
 > [!WARNING]
 > **DVAP is deliberately vulnerable.** Everything in it is simulated. Run it only on a machine you
@@ -25,8 +26,12 @@ You need Docker with Compose v2 ([requirements](https://jxbani.github.io/DVAP/re
 ```bash
 git clone https://github.com/jxbani/DVAP.git && cd DVAP
 ./dvap up        # checks your machine, then starts the lab (first run asks which LLM mode to use)
-./dvap demo      # watch a malicious ticket make the agent overdose the chlorine
+./dvap demo      # an attack overflows the tank; then SafeEnvelope blocks the same attack
 ```
+
+`./dvap demo` is a staged, four-minute demo made for talks: Enter advances each step (`--auto` runs
+it on timers, for recording), and it uses recorded agent responses so it can't go wrong on stage.
+`./dvap demo --quick` is the one-minute version: a single attack, no guard.
 
 Then open the scoreboard at http://127.0.0.1:8090 and the plant's HMI at http://127.0.0.1:8080.
 No clone needed: each [release](https://github.com/jxbani/DVAP/releases/latest) has a

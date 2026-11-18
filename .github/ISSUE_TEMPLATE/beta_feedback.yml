@@ -1,0 +1,179 @@
+name: Beta feedback
+description: Your report from testing the DVAP 0.9 beta (one per tester; partial reports welcome).
+title: "[beta] "
+labels: [beta-feedback]
+# scripts/beta_report.py parses these answers by their labels: rename a label there too.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for testing! The steps are in [Beta testing](https://jxbani.github.io/DVAP/BETA_TESTING/).
+        This issue is **public**: don't paste API keys, tokens or anything personal.
+        A way out of the lab (to your host, network or the internet) goes to the Security tab instead.
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Linux
+        - macOS
+        - Windows (WSL2)
+        - Windows (PowerShell, no WSL)
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: arch
+    attributes:
+      label: CPU architecture
+      description: "`uname -m`, or Windows → Settings → System → About."
+      options:
+        - x86_64 / amd64 (Intel, AMD)
+        - arm64 / aarch64 (Apple Silicon, ARM)
+    validations:
+      required: true
+  - type: input
+    id: os-details
+    attributes:
+      label: OS version and machine
+      placeholder: Ubuntu 24.04 on a 16 GB laptop / macOS 15 on an M2 MacBook Air
+  - type: input
+    id: docker
+    attributes:
+      label: Docker version
+      description: "`docker version --format '{{.Server.Version}}'` and `docker compose version`"
+      placeholder: Docker 28.1.1, Compose v2.36.0 (Docker Desktop 4.41)
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: LLM mode
+      description: The mode you used the most. Say in the comments below if you switched.
+      options:
+        - replay
+        - ollama
+        - api
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-result
+    attributes:
+      label: Did the install work?
+      options:
+        - Yes, first time
+        - Yes, after fixing something (please say what below)
+        - "No"
+    validations:
+      required: true
+  - type: input
+    id: install-minutes
+    attributes:
+      label: Install time (minutes)
+      description: From downloading the zip to `./dvap up` finishing. A number, please.
+      placeholder: "12"
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: "`./dvap doctor` output"
+      description: The whole output, even if everything passed.
+      render: shell
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: tried
+    attributes:
+      label: Challenges you tried
+      options:
+        - label: C01
+        - label: C01b
+        - label: C02
+        - label: C03
+        - label: C04
+        - label: C05
+        - label: C06
+        - label: C07
+        - label: C08
+        - label: C09
+        - label: C10
+        - label: A defended variant (./dvap defend)
+        - label: ./dvap demo
+  - type: checkboxes
+    id: solved
+    attributes:
+      label: Challenges you solved
+      description: Without the solution page. If you needed it, say so below.
+      options:
+        - label: C01
+        - label: C01b
+        - label: C02
+        - label: C03
+        - label: C04
+        - label: C05
+        - label: C06
+        - label: C07
+        - label: C08
+        - label: C09
+        - label: C10
+        - label: Got around SafeEnvelope in a defended variant
+
+  - type: dropdown
+    id: areas
+    attributes:
+      label: Where did you hit problems?
+      multiple: true
+      options:
+        - Install / Docker
+        - ./dvap doctor
+        - LLM mode / model
+        - Challenges (story, hints, checker)
+        - SafeEnvelope / defended variant
+        - HMI / scoreboard / ticket form
+        - ./dvap demo
+        - Docs
+        - None
+  - type: textarea
+    id: confusing
+    attributes:
+      label: What was confusing?
+      description: Anything you had to guess, reread, or look up. Small things count.
+  - type: textarea
+    id: broke
+    attributes:
+      label: What broke?
+      description: One problem per line, if you can, with what you did and what happened.
+
+  - type: dropdown
+    id: rating
+    attributes:
+      label: Overall rating
+      options:
+        - 5 - excellent
+        - 4 - good
+        - 3 - okay
+        - 2 - poor
+        - 1 - bad
+    validations:
+      required: true
+  - type: dropdown
+    id: use
+    attributes:
+      label: Would you use it in a class or CTF?
+      options:
+        - Yes, in a class
+        - Yes, in a CTF
+        - Yes, both
+        - Maybe
+        - "No"
+    validations:
+      required: true
+  - type: textarea
+    id: comments
+    attributes:
+      label: Anything else?
+      description: Why (or why not) for the class/CTF question, ideas, what you liked.

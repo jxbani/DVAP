@@ -39,6 +39,7 @@ class Harness:
         self.agent, self.bus, self.published, self.lab = agent, bus, published, lab
 
     def script(self, *replies) -> None:
+        assert isinstance(self.agent.llm, FakeLLM)
         self.agent.llm.script = list(replies)
 
 
