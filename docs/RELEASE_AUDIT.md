@@ -11,6 +11,34 @@
 or diff, and the containment holds. But four blockers must be fixed first — two of them can't be
 undone once the repository is public (see [the prioritised fix list](#prioritised-fix-list)).
 
+## Fix status (updated 2026-11-18)
+
+Every blocker and "should" item is resolved: 11 fixed, and blocker 2 accepted as the owner's
+decision. Each fix is its own commit on `safeenvelope`, and the full test suite (`make test`, i.e.
+`uv run pytest`) plus ruff and mypy passed before each commit. `main` was fast-forwarded to include
+them all. The findings below are kept as they were observed at `8b4b956`; line references in them
+point at that commit.
+
+| # | Item | Status | Commit |
+|---|---|---|---|
+| 1 | Merge the release into `main` | ✅ Fixed: `main` fast-forwarded `0a2f909` → `7ac34a8` (then to this status update) | `7ac34a8` |
+| 2 | Commit email in history | ⚪ **Accepted by the owner**: the history keeps the existing author email; no rewrite | — |
+| 3 | Placeholders (clone URL, CoC contact) | ✅ Fixed | `d477558` |
+| 4 | LiteLLM outbound fetch | ✅ Fixed, with `LITELLM_OFFLINE_MODE=true` (covers the price map *and* LiteLLM's other self-initiated downloads) | `b8952da` |
+| 5 | `make reset` deleting the model | ✅ Fixed | `6b82ed4` |
+| 6 | `.gitattributes` / CRLF in images | ✅ Fixed (0 CR bytes in the rebuilt sandbox) | `09b2523` |
+| 7 | Fail closed on a public flag secret | ✅ Fixed (also covers `.env.example`'s `change-me`) | `6428735` |
+| 8 | Pinning | ✅ Fixed: Python via `uv sync --locked` + hatchling pinned; images by digest; Redis → Valkey 9.1.3; DVAP's own images tagged `${DVAP_VERSION}` instead of the implicit `:latest` | `d1e59a7`, `80a566c` |
+| 9 | Vulnerable services off the egress network | ✅ Fixed: nginx gateway is the only lab container on `edge`; the UIs have no default route | `f7b25e3` |
+| 10 | README gaps | ✅ Fixed (broken GIF removed; left as a TODO comment until recorded) | `3a16fc2` |
+| 11 | Test gaps | ✅ Fixed: planner, agent API, vendor routes, and a compose smoke test in CI | `c7fe68d` |
+| 12 | GitHub Actions pinning | ✅ Fixed | `7ac34a8` |
+
+Still for the owner before publishing: enable **private vulnerability reporting** in the GitHub
+repository settings (Security → Settings). `SECURITY.md` and the Code of Conduct both send reports
+there, and the channel doesn't exist until it's enabled. The nice-to-have items (13–18) were not in
+scope for this pass; 16 is partly done (hatchling pinned in `d1e59a7`).
+
 ---
 
 ## 1. Secrets
@@ -169,38 +197,45 @@ All 11 challenges have an automated solver (`tests/test_solvers.py`) and a bench
 
 ### Blocker — fix before the repository goes public
 
-1. **Merge the release into `main`.** `main` (`0a2f909`) has no README, LICENSE, SECURITY or
-   SafeEnvelope; everything is on `safeenvelope` (`8b4b956`). If `main` is the default branch, publishing
-   now ships an unlicensed repo with no safety warnings.
-2. **Decide on the commit email before publishing** (§5). This can't be undone after the repo goes
-   public. Options: rewrite history to a GitHub `noreply` address, or publish a fresh squashed history.
-3. **Replace the placeholders**: `OWNER` (`README.md:23`, `docs/INSTRUCTOR_GUIDE.md:15`), and the
-   Code of Conduct contact (`CODE_OF_CONDUCT.md:66`). The quickstart doesn't work and the CoC can't be
-   enforced as shipped.
-4. **Stop the LiteLLM outbound fetch** (§2): set `LITELLM_LOCAL_MODEL_COST_MAP=True` for
-   `agent-operator` (and for `dvap bench`). The project's first hard rule forbids connections outside
-   the lab network, and the code currently attempts one on every agent start.
+1. ✅ **Fixed — `main` fast-forwarded to `7ac34a8`.** **Merge the release into `main`.** `main`
+   (`0a2f909`) has no README, LICENSE, SECURITY or SafeEnvelope; everything is on `safeenvelope`
+   (`8b4b956`). If `main` is the default branch, publishing now ships an unlicensed repo with no
+   safety warnings.
+2. ⚪ **Accepted by the owner — history unchanged.** **Decide on the commit email before publishing**
+   (§5). This can't be undone after the repo goes public. Options: rewrite history to a GitHub
+   `noreply` address, or publish a fresh squashed history.
+3. ✅ **Fixed in `d477558`.** **Replace the placeholders**: `OWNER` (`README.md:23`,
+   `docs/INSTRUCTOR_GUIDE.md:15`), and the Code of Conduct contact (`CODE_OF_CONDUCT.md:66`). The
+   quickstart doesn't work and the CoC can't be enforced as shipped.
+4. ✅ **Fixed in `b8952da`.** **Stop the LiteLLM outbound fetch** (§2): set
+   `LITELLM_LOCAL_MODEL_COST_MAP=True` for `agent-operator` (and for `dvap bench`). The project's first
+   hard rule forbids connections outside the lab network, and the code currently attempts one on every
+   agent start.
 
 ### Should — fix for a credible first release
 
-5. Fix **`make reset` deleting the model volume** (`Makefile:31` vs `docker-compose.yml:216`): remove
-   the lab's volumes by name instead of `down -v`, or correct the comment and warn in the README.
-6. Add **`.gitattributes`** (`* text=auto eol=lf`, at least `*.sh` and `Dockerfile`) so Windows
-   checkouts don't put CRLF into Linux images (§4).
-7. **Fail closed on the default flag secret**: refuse to mint or verify flags when `TEAM` isn't `solo`
-   and `DVAP_FLAG_SECRET` is the public default (`scoreboard/api.py:29`).
-8. **Pin images**: the base image by digest (`Dockerfile:3`), and replace `ollama/ollama:latest`
-   (`docker-compose.yml:184,200`) and `redis:7-alpine` (`:42`) with digests. Prefer **Valkey or
-   Redis 7.2** to keep the stack OSI-licensed (§6).
-9. **Get vulnerable services off the egress network**: put an ingress-only reverse proxy on `edge`
-   in front of `cmms`/`hmi`/`scoreboard` (keeping those three internal-only), or disable masquerading
-   on `edge` after testing on Docker Desktop.
-10. **README additions** (§7 items 3–10): attacker access, defended mode, platform notes and
-    Docker memory, `docker compose` equivalents of the `make` targets, troubleshooting, hosted models,
-    cleanup, `uv`. Record or remove the demo GIF.
-11. **Tests**: a compose smoke test in CI (start the stack, check health, one guarded MCP call);
-    unit tests for `maintenance-planner`; the agent-operator HTTP API; the vendor `/rugpull` route.
-12. **Pin GitHub Actions** to commit SHAs and set an explicit `uv` version in `setup-uv`.
+5. ✅ **Fixed in `6b82ed4`.** Fix **`make reset` deleting the model volume** (`Makefile:31` vs
+   `docker-compose.yml:216`): remove the lab's volumes by name instead of `down -v`, or correct the
+   comment and warn in the README.
+6. ✅ **Fixed in `09b2523`.** Add **`.gitattributes`** (`* text=auto eol=lf`, at least `*.sh` and
+   `Dockerfile`) so Windows checkouts don't put CRLF into Linux images (§4).
+7. ✅ **Fixed in `6428735`.** **Fail closed on the default flag secret**: refuse to mint or verify
+   flags when `TEAM` isn't `solo` and `DVAP_FLAG_SECRET` is the public default (`scoreboard/api.py:29`).
+8. ✅ **Fixed in `d1e59a7` (Python) and `80a566c` (images).** **Pin images**: the base image by digest
+   (`Dockerfile:3`), and replace `ollama/ollama:latest` (`docker-compose.yml:184,200`) and
+   `redis:7-alpine` (`:42`) with digests. Prefer **Valkey or Redis 7.2** to keep the stack
+   OSI-licensed (§6).
+9. ✅ **Fixed in `f7b25e3`.** **Get vulnerable services off the egress network**: put an ingress-only
+   reverse proxy on `edge` in front of `cmms`/`hmi`/`scoreboard` (keeping those three internal-only),
+   or disable masquerading on `edge` after testing on Docker Desktop.
+10. ✅ **Fixed in `3a16fc2`.** **README additions** (§7 items 3–10): attacker access, defended mode,
+    platform notes and Docker memory, `docker compose` equivalents of the `make` targets,
+    troubleshooting, hosted models, cleanup, `uv`. Record or remove the demo GIF.
+11. ✅ **Fixed in `c7fe68d`.** **Tests**: a compose smoke test in CI (start the stack, check health,
+    one guarded MCP call); unit tests for `maintenance-planner`; the agent-operator HTTP API; the
+    vendor `/rugpull` route.
+12. ✅ **Fixed in `7ac34a8`.** **Pin GitHub Actions** to commit SHAs and set an explicit `uv` version
+    in `setup-uv`.
 
 ### Nice-to-have
 
