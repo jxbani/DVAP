@@ -10,13 +10,13 @@ entries for the people running the lab. How to cut a release: [docs/RELEASING.md
 
 ## [Unreleased]
 
-## [0.9.0-beta.1] - 2026-11-19
+## [1.0.0] - 2026-11-19
+
+The first release. (A 0.9.0-beta.1 pre-release was prepared but never published, so its changes
+are all here; the external beta it was for has not run yet.)
 
 ### Added
 
-- The beta kit: a tester guide (docs/BETA_TESTING.md), a beta feedback issue form, and
-  `scripts/beta_report.py` to summarise the reports.
-- `./dvap defend [--off]`: SafeEnvelope on or off for the running challenge, without `make`.
 - A simulated water-treatment plant (plant-sim, 10 Hz, deterministic per seed) behind a virtual
   PLC speaking Modbus/TCP and OPC UA, with an HMI, historian, CMMS ticket system, Valkey message
   bus, maintenance-planner agent and a third-party vendor MCP server.
@@ -26,28 +26,30 @@ entries for the people running the lab. How to cut a release: [docs/RELEASING.md
   with a story, three hints, a mitigation, a reference solution and an automated solver.
 - A scoreboard with per-challenge resets and team-bound HMAC flags for CTFs.
 - SafeEnvelope, a deterministic policy guard between the MCP tools and the PLC, with defended
-  variants of the challenges.
-- `dvap bench`: benchmarks models (and the guard) against every challenge, with JSON, CSV and HTML
-  reports.
-- A fresh-install check (`scripts/verify_fresh_install.sh`, the Fresh install workflow): the
-  release zip and published images on Ubuntu, a WSL-like container and Intel macOS, from download
-  to C01's overflow in under 15 minutes.
-- `./dvap demo`: a staged, four-minute talk demo (attack → physical incident, then the same attack
-  DENIED by SafeEnvelope), with `--auto` for recording, `--challenge C01|C02` and `--live`. The
-  previous one-attack demo is `./dvap demo --quick`. The HMI has a presenter layout
-  (`?presenter=1`).
-- Demo media generated from a live run (`scripts/record_demo.py`, optional `media` dependency
-  group): the README's demo GIF, a full demo video and the GitHub social preview.
+  variants of the challenges (`./dvap defend` turns it on for the running challenge).
 - The `./dvap` CLI (`dvap.ps1` on Windows): `up`, `down`, `reset`, `status`, `logs`, `doctor`,
-  `demo`, `bench`, `version`, `update`, with a first-run wizard.
+  `defend`, `demo`, `bench`, `version`, `update`, with a first-run wizard.
 - Three LLM modes: `replay` (recorded responses, no model), `ollama` (local model) and `api`
   (hosted model).
+- `./dvap demo`: a staged, four-minute talk demo (attack → physical incident, then the same attack
+  DENIED by SafeEnvelope), with `--auto` for recording, `--challenge C01|C02` and `--live`;
+  `./dvap demo --quick` is the one-attack version. The HMI has a presenter layout
+  (`?presenter=1`).
+- `dvap bench`: benchmarks models (and the guard) against every challenge, with JSON, CSV and HTML
+  reports.
 - Prebuilt multi-arch images (linux/amd64, linux/arm64) on GHCR, signed with cosign, with SBOMs
   and build-provenance attestations, and a `dvap-<version>.zip` that runs the lab without cloning.
 - Documentation site (https://jxbani.github.io/DVAP/): quickstart, requirements per LLM mode,
   installation per OS, troubleshooting with the `dvap doctor` output for each problem, a spoiler-free
   page per challenge with separate solution pages, architecture, SafeEnvelope design, instructor
-  guide, contributing and security policy.
+  guide, a presenter's guide, contributing and security policy.
+- A demo GIF, a full demo video and a social preview, recorded from a live run by
+  `scripts/record_demo.py` (optional `media` dependency group).
+- For maintainers: a fresh-install check (`scripts/verify_fresh_install.sh` and the Fresh install
+  workflow: the release zip and published images on Ubuntu, a WSL-like container and Intel macOS,
+  from download to C01's overflow in under 15 minutes); SemVer pre-release tags
+  (`vX.Y.Z-beta.N`), published as GitHub pre-releases; and a beta kit (docs/BETA_TESTING.md, a
+  beta feedback issue form and `scripts/beta_report.py`).
 
 ### Security
 
@@ -59,5 +61,5 @@ entries for the people running the lab. How to cut a release: [docs/RELEASING.md
 - Every image and GitHub Action is pinned by digest or commit SHA, and Python dependencies by
   `uv.lock`; CI fails on any fixable CRITICAL vulnerability in DVAP's images.
 
-[Unreleased]: https://github.com/jxbani/DVAP/compare/v0.9.0-beta.1...HEAD
-[0.9.0-beta.1]: https://github.com/jxbani/DVAP/releases/tag/v0.9.0-beta.1
+[Unreleased]: https://github.com/jxbani/DVAP/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/jxbani/DVAP/releases/tag/v1.0.0

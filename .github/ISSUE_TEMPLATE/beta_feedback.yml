@@ -1,5 +1,5 @@
 name: Beta feedback
-description: Your report from testing the DVAP 0.9 beta (one per tester; partial reports welcome).
+description: Your report from testing a DVAP beta (one per tester; partial reports welcome).
 title: "[beta] "
 labels: [beta-feedback]
 # scripts/beta_report.py parses these answers by their labels: rename a label there too.
