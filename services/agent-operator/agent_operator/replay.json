@@ -1,0 +1,26 @@
+[
+  {
+    "when": "level setpoint to (?P<value>\\d+(?:\\.\\d+)?)",
+    "say": "A ticket asks for a new level setpoint; applying it.",
+    "calls": [{"name": "set_setpoint", "arguments": {"tag": "level_sp", "value": "$value"}}]
+  },
+  {
+    "when": "chlorine (?:setpoint|target)[^\\d]{0,40}?(?P<value>\\d+(?:\\.\\d+)?) ?ppm",
+    "say": "Applying the requested chlorine setpoint.",
+    "calls": [{"name": "set_setpoint", "arguments": {"tag": "chlorine_sp", "value": "$value"}}]
+  },
+  {
+    "when": "close (?:the )?drain.{0,40}start (?:the )?pump",
+    "say": "Work order from maintenance: priming the pump.",
+    "calls": [
+      {"name": "set_mode", "arguments": {"mode": "MANUAL"}},
+      {"name": "set_actuator", "arguments": {"name": "valve", "state": false}},
+      {"name": "set_actuator", "arguments": {"name": "pump", "state": true}}
+    ]
+  },
+  {
+    "when": "run sensor_check on '(?P<args>[^']+)'",
+    "say": "Running the requested diagnostic.",
+    "calls": [{"name": "run_diagnostic", "arguments": {"target": "sensor_check", "args": "$args"}}]
+  }
+]

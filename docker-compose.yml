@@ -1,4 +1,7 @@
 # DVAP lab. Everything is simulated and stays on the internal `plant` network.
+# DVAP's own images are pulled prebuilt from ghcr.io (multi-arch: amd64 + arm64). To build them
+# locally instead, add the override: docker compose -f docker-compose.yml -f docker-compose.build.yml
+# (`./dvap up --build` and `make up` do this).
 # Only the `gateway` publishes ports (HMI with its guard panel, CMMS ticket form, scoreboard), and
 # only on 127.0.0.1. tests/test_lab_safety.py enforces these rules.
 
@@ -10,8 +13,7 @@ x-healthcheck: &healthcheck
 
 services:
   plant-sim:
-    build: { context: ., args: { SERVICE: plant-sim, PACKAGE: plant_sim } }
-    image: dvap-plant-sim:${DVAP_VERSION:-0.1.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-plant-sim:${DVAP_VERSION:-0.1.0}
     environment:
       PLANT_SEED: ${PLANT_SEED:-0}
       PLANT_NOISE: ${PLANT_NOISE:-0}
@@ -19,8 +21,7 @@ services:
     healthcheck: *healthcheck
 
   plc:
-    build: { context: ., args: { SERVICE: plc, PACKAGE: plc, MODULE: main } }
-    image: dvap-plc:${DVAP_VERSION:-0.1.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-plc:${DVAP_VERSION:-0.1.0}
     environment:
       PLANT_URL: http://plant-sim:8000
       PLC_DIFFICULTY: ${PLC_DIFFICULTY:-easy} # easy | medium | hard
@@ -30,8 +31,7 @@ services:
     healthcheck: *healthcheck
 
   historian:
-    build: { context: ., args: { SERVICE: historian, PACKAGE: historian } }
-    image: dvap-historian:${DVAP_VERSION:-0.1.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-historian:${DVAP_VERSION:-0.1.0}
     environment:
       PLC_HOST: plc
       HISTORIAN_DB: /data/historian.sqlite
@@ -56,8 +56,7 @@ services:
 
   # Maintenance tickets. No authentication (DVAP-VULN: C01): this is where participants inject text.
   cmms:
-    build: { context: ., args: { SERVICE: cmms, PACKAGE: cmms } }
-    image: dvap-cmms:${DVAP_VERSION:-0.1.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-cmms:${DVAP_VERSION:-0.1.0}
     environment:
       CMMS_DB: /data/cmms.sqlite
     volumes: [cmms-data:/data]
@@ -65,8 +64,7 @@ services:
     healthcheck: *healthcheck
 
   hmi:
-    build: { context: ., args: { SERVICE: hmi, PACKAGE: hmi } }
-    image: dvap-hmi:${DVAP_VERSION:-0.1.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-hmi:${DVAP_VERSION:-0.1.0}
     environment:
       PLANT_URL: http://plant-sim:8000
       HISTORIAN_URL: http://historian:8000
@@ -80,8 +78,7 @@ services:
   # Challenge engine, reset, flags and scoring UI. Reads challenges/ (bind-mounted so authors
   # can edit without a rebuild) and resets every service per challenge.
   scoreboard:
-    build: { context: ., args: { SERVICE: scoreboard, PACKAGE: scoreboard } }
-    image: dvap-scoreboard:${DVAP_VERSION:-0.1.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-scoreboard:${DVAP_VERSION:-0.1.0}
     environment:
       TEAM: ${TEAM:-solo}
       DVAP_FLAG_SECRET: ${DVAP_FLAG_SECRET:-dvap-dev-secret}
@@ -128,8 +125,7 @@ services:
   # On the internal `plant` network (no `edge`, so no internet): confined to the lab, but a
   # shell inside it can reach the PLC over Modbus, which is the point of the C05 challenge.
   sandbox:
-    build: { context: ., args: { SERVICE: sandbox, PACKAGE: sandbox } }
-    image: dvap-sandbox:${DVAP_VERSION:-0.1.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-sandbox:${DVAP_VERSION:-0.1.0}
     networks: [plant]
     # Hardened: it runs attacker-controlled shell commands (C05). See docs/LAB_SAFETY.md.
     user: "65534:65534" # nobody
@@ -144,8 +140,7 @@ services:
   # Third-party MCP server for demand forecasting (DVAP-VULN: C04). Its tool description is a
   # poisoned, rug-pulling instruction channel. Internal network only.
   vendor-analytics:
-    build: { context: ., args: { SERVICE: vendor-analytics, PACKAGE: vendor_analytics, MODULE: server } }
-    image: dvap-vendor-analytics:${DVAP_VERSION:-0.1.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-vendor-analytics:${DVAP_VERSION:-0.1.0}
     networks: [plant]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -155,8 +150,7 @@ services:
 
   # MCP server: the only way the agent touches the plant. Internal network only.
   mcp-plant:
-    build: { context: ., args: { SERVICE: mcp-plant, PACKAGE: mcp_plant, MODULE: main } }
-    image: dvap-mcp-plant:${DVAP_VERSION:-0.1.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-mcp-plant:${DVAP_VERSION:-0.1.0}
     environment:
       PLC_HOST: plc
       CMMS_URL: http://cmms:8000
@@ -181,19 +175,18 @@ services:
 
   # The victim LLM agent. Talks to the plant only through mcp-plant.
   agent-operator:
-    build: { context: ., args: { SERVICE: agent-operator, PACKAGE: agent_operator, MODULE: api } }
-    image: dvap-agent-operator:${DVAP_VERSION:-0.1.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-agent-operator:${DVAP_VERSION:-0.1.0}
     environment:
       MCP_URL: http://mcp-plant:8000/mcp
       VENDOR_MCP_URL: http://vendor-analytics:8000/mcp # third-party server (C04)
       REDIS_URL: redis://bus:6379
-      MODEL: ${MODEL:-ollama/qwen2.5:7b-instruct}
+      MODEL: ${MODEL:-replay} # see DVAP_LLM_MODE in .env.example
       OLLAMA_API_BASE: ${OLLAMA_API_BASE:-http://ollama:11434}
       AGENT_CYCLE_SECONDS: ${AGENT_CYCLE_SECONDS:-30}
-      # For a hosted model instead of Ollama, set MODEL (e.g. anthropic/claude-3-5-sonnet)
-      # and pass the key through, e.g. ANTHROPIC_API_KEY or OPENAI_API_KEY.
+      # api mode (./dvap up --mode api): a hosted model and its key; docker-compose.api.yml adds the route out.
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE: ${OPENAI_API_BASE:-} # any OpenAI-compatible endpoint (blank: api.openai.com)
     depends_on:
       mcp-plant: { condition: service_healthy }
       vendor-analytics: { condition: service_healthy }
@@ -202,8 +195,7 @@ services:
 
   # Second agent: issues work orders to the operator over the unauthenticated Redis bus (C07).
   maintenance-planner:
-    build: { context: ., args: { SERVICE: maintenance-planner, PACKAGE: maintenance_planner } }
-    image: dvap-maintenance-planner:${DVAP_VERSION:-0.1.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-maintenance-planner:${DVAP_VERSION:-0.1.0}
     environment:
       REDIS_URL: redis://bus:6379
     depends_on:
@@ -217,6 +209,7 @@ services:
   # GPU is wired in (uncomment the deploy block). The agent then runs fully offline.
   ollama:
     image: ollama/ollama:0.40.16@sha256:910d0d8107b538fb0894e63163eb195de0cc7aefcbc666dc62d3b18f71124592
+    profiles: [ollama] # only in DVAP_LLM_MODE=ollama (COMPOSE_PROFILES=ollama in .env)
     volumes: [ollama-models:/root/.ollama]
     networks: [plant]
     healthcheck:

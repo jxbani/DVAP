@@ -37,6 +37,9 @@ dev = [
     "ruff>=0.17.5",
     "types-pyyaml>=6.0.12.20261113",
 ]
+docs = [
+    "mkdocs-material>=9.8.1",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

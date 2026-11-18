@@ -11,9 +11,12 @@ DVAP is built for a university lab session, a conference workshop or a CTF. This
 
 The model download is ~4.7 GB; do not leave it to conference Wi-Fi.
 
-1. Install Docker (Compose v2) and `make`; have ~8 GB of free RAM.
-2. `git clone https://github.com/jxbani/DVAP.git && cd DVAP && make up && make model`
-3. Open http://127.0.0.1:8090 — the scoreboard should list 11 challenges — and
+1. Install Docker (Compose v2) and git.
+2. `git clone https://github.com/jxbani/DVAP.git && cd DVAP && ./dvap doctor`, and fix anything it
+   marks FAIL (it prints the fix).
+3. `./dvap up --mode ollama` (downloads the model once; Docker needs 8 GB of memory). On a laptop
+   that can't, `./dvap up --mode replay` needs no model and 4 GB.
+4. `./dvap demo`, then open http://127.0.0.1:8090 — the scoreboard should list 11 challenges — and
    http://127.0.0.1:8080, where the HMI should show the plant running.
 
 On CPU a 7B model takes tens of seconds per agent decision; that is fine, the HMI shows every step.
@@ -47,7 +50,7 @@ the projector.
 | 1:10–1:20 | Break | |
 | 1:20–2:05 | **Privilege, supply chain, code, memory** — C03, C04, C05, C06 | Teams choose two. Debrief C03 vs C09 (who approved what?) and C06 (an attack that waits a shift). |
 | 2:05–2:35 | **Multi-agent and humans** — C07, C08, C09, C10 | Teams choose two. Debrief: trust between agents, a forged sensor, a misleading approval, a task that keeps coming back. |
-| 2:35–2:55 | **Defence** | Start a solved challenge again, run `make defend`, repeat the attack and watch the SafeEnvelope panel deny it with a reason. Then try C07 defended — it is *not* blocked. Discuss [What SafeEnvelope does NOT protect against](../README.md#what-safeenvelope-does-not-protect-against). |
+| 2:35–2:55 | **Defence** | Start a solved challenge again, run `make defend`, repeat the attack and watch the SafeEnvelope panel deny it with a reason. Then try C07 defended — it is *not* blocked. Discuss [What SafeEnvelope does NOT protect against](SAFEENVELOPE.md#what-safeenvelope-does-not-protect-against). |
 | 2:55–3:00 | Wrap-up | Map each solved challenge to its ASI category; point to `docs/VULNERABILITIES.md` and the mitigations in each `challenge.yaml`. |
 
 Tips:
@@ -74,7 +77,7 @@ TEAM=team07
 DVAP_FLAG_SECRET=<long random string; keep it from participants until the end>
 ```
 
-Then `make up`. Each team's scoreboard mints flags like `DVAP{C03_9f2c...}` as they solve challenges.
+Then `./dvap up`. Each team's scoreboard mints flags like `DVAP{C03_9f2c...}` as they solve challenges.
 
 ### Several teams on one host
 

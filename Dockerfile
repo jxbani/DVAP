@@ -3,6 +3,9 @@
 # Pinned by digest (a multi-arch index: amd64 + arm64); bump deliberately, then rebuild.
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim@sha256:e5b65587bce7de595f299855d7385fe7fca39b8a74baa261ba1b7147afa78e58
 WORKDIR /app
+# Debian security fixes released after the pinned base was built (CI's Trivy gate fails on a fixable
+# CRITICAL). The one non-reproducible step, deliberately: a release image gets the fixes of its day.
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && rm -rf /var/lib/apt/lists/*
 COPY pyproject.toml uv.lock ./
 # --locked: install exactly the versions and hashes in uv.lock, and fail if it is out of date.
 # --no-install-project: the containers run the services by pythonpath and never need the `dvap`

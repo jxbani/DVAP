@@ -1,0 +1,26 @@
+# Local builds of DVAP's own images, layered over docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+# The images keep their ghcr.io names, so a local build replaces the prebuilt one.
+services:
+  plant-sim:
+    build: { context: ., args: { SERVICE: plant-sim, PACKAGE: plant_sim } }
+  plc:
+    build: { context: ., args: { SERVICE: plc, PACKAGE: plc, MODULE: main } }
+  historian:
+    build: { context: ., args: { SERVICE: historian, PACKAGE: historian } }
+  cmms:
+    build: { context: ., args: { SERVICE: cmms, PACKAGE: cmms } }
+  hmi:
+    build: { context: ., args: { SERVICE: hmi, PACKAGE: hmi } }
+  scoreboard:
+    build: { context: ., args: { SERVICE: scoreboard, PACKAGE: scoreboard } }
+  sandbox:
+    build: { context: ., args: { SERVICE: sandbox, PACKAGE: sandbox } }
+  vendor-analytics:
+    build: { context: ., args: { SERVICE: vendor-analytics, PACKAGE: vendor_analytics, MODULE: server } }
+  mcp-plant:
+    build: { context: ., args: { SERVICE: mcp-plant, PACKAGE: mcp_plant, MODULE: main } }
+  agent-operator:
+    build: { context: ., args: { SERVICE: agent-operator, PACKAGE: agent_operator, MODULE: api } }
+  maintenance-planner:
+    build: { context: ., args: { SERVICE: maintenance-planner, PACKAGE: maintenance_planner } }

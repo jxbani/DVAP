@@ -10,6 +10,7 @@ import yaml
 
 COMPOSE = yaml.safe_load(Path("docker-compose.yml").read_text(encoding="utf-8"))
 SERVICES = COMPOSE["services"]
+BUILDS = yaml.safe_load(Path("docker-compose.build.yml").read_text(encoding="utf-8"))["services"]
 SETUP_ONLY = {"ollama-pull"}  # one-shot model download, `setup` profile, never part of the running lab
 
 
@@ -88,10 +89,27 @@ def test_images_are_pinned():
     for name, svc in SERVICES.items():
         image = svc["image"]
         assert ":latest" not in image, f"{name} floats on :latest"
-        if "build" in svc:
-            assert image == f"dvap-{name}:${{DVAP_VERSION:-{version}}}", f"{name} is not tagged with DVAP_VERSION"
+        if name in BUILDS:
+            assert image == f"${{DVAP_REGISTRY:-ghcr.io/jxbani}}/dvap-{name}:${{DVAP_VERSION:-{version}}}", name
         else:
             assert "@sha256:" in image, f"{name} third-party image is not pinned by digest"
+
+
+def test_build_override_and_release_workflow_cover_the_same_images():
+    """docker-compose.yml pulls; docker-compose.build.yml only adds `build:` to the same services;
+    the release workflow publishes exactly those, built the same way."""
+    assert not any("build" in svc for svc in SERVICES.values())  # the default path never builds
+    assert all(set(svc) == {"build"} for svc in BUILDS.values())
+    jobs = yaml.safe_load(Path(".github/workflows/release.yml").read_text(encoding="utf-8"))["jobs"]
+    published = {s["name"]: (s["package"], s["module"]) for s in jobs["images"]["strategy"]["matrix"]["service"]}
+    built = {n: (b["build"]["args"]["PACKAGE"], b["build"]["args"].get("MODULE", "api")) for n, b in BUILDS.items()}
+    assert published == built
+
+
+def test_api_mode_override_only_lets_the_agent_out():
+    """`--mode api` adds docker-compose.api.yml: the agent (and nothing else) joins `edge`."""
+    api = yaml.safe_load(Path("docker-compose.api.yml").read_text(encoding="utf-8"))["services"]
+    assert api == {"agent-operator": {"networks": ["plant", "edge"]}}
 
 
 def test_github_actions_are_pinned_to_commits():
@@ -113,6 +131,9 @@ def test_make_reset_keeps_the_downloaded_model():
     assert not any("down -v" in r or "down --volumes" in r for r in recipes)
     allowlist = next(line for line in lines if line.startswith("LAB_STATE_VOLUMES"))
     assert set(allowlist.split("=", 1)[1].split()) == set(COMPOSE["volumes"]) - {"ollama-models"}
+    from bench.ops import LAB_STATE_VOLUMES  # `./dvap reset` uses the same allowlist
+
+    assert set(LAB_STATE_VOLUMES) == set(COMPOSE["volumes"]) - {"ollama-models"}
 
 
 def test_litellm_never_fetches_catalogs_on_its_own():

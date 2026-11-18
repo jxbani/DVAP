@@ -1,0 +1,26 @@
+# Weekly update PRs. Everything here is pinned (uv.lock, image digests, action SHAs), so these
+# PRs are how pins move; CI (tests, solvers, full stack, Trivy) gates each one.
+version: 2
+updates:
+  - package-ecosystem: uv # pyproject.toml + uv.lock
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    groups:
+      python-minor-and-patch:
+        update-types: [minor, patch]
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: docker # the Dockerfile's base image digest
+    directory: /
+    schedule: { interval: weekly, day: monday }
+
+  - package-ecosystem: docker-compose # valkey, nginx-unprivileged, ollama digests
+    directory: /
+    schedule: { interval: weekly, day: monday }
+
+  - package-ecosystem: github-actions # SHAs in .github/workflows (the version comments too)
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    groups:
+      actions:
+        patterns: ["*"]

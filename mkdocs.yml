@@ -1,0 +1,74 @@
+# The documentation site (docs/), published to GitHub Pages by .github/workflows/docs.yml.
+# Local preview: uv run --group docs mkdocs serve
+site_name: DVAP — Damn Vulnerable Agentic Plant
+site_description: A deliberately vulnerable, simulated water-treatment plant run by an LLM agent, mapped to the OWASP Top 10 for Agentic Applications.
+site_url: https://jxbani.github.io/DVAP/
+repo_url: https://github.com/jxbani/DVAP
+repo_name: jxbani/DVAP
+edit_uri: edit/main/docs/
+docs_dir: docs
+not_in_nav: |
+  challenges/solutions/*.md
+exclude_docs: |
+  RELEASE_AUDIT.md
+theme:
+  name: material
+  features: [navigation.sections, content.code.copy]
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle: { icon: material/brightness-4, name: Dark mode }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle: { icon: material/brightness-7, name: Light mode }
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc: { permalink: true }
+  - pymdownx.details # collapsible hints: ??? tip "Hint 1"
+  - pymdownx.tabbed: { alternate_style: true } # per-OS installation tabs
+  - pymdownx.snippets: # docs/security.md and docs/contributing.md include the root files
+      base_path: ["."]
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - { name: mermaid, class: mermaid, format: !!python/name:pymdownx.superfences.fence_code_format }
+nav:
+  - Home: index.md
+  - Get started:
+      - Quickstart: quickstart.md
+      - Requirements: requirements.md
+      - Installation: installation.md
+      - Troubleshooting & FAQ: troubleshooting.md
+  - Challenges:
+      - Overview: challenges/index.md
+      - C01 Ticket hijack: challenges/C01.md
+      - C01b PLC string hijack: challenges/C01b.md
+      - C02 Unsafe setpoint: challenges/C02.md
+      - C03 Privilege abuse: challenges/C03.md
+      - C04 Supply chain rug-pull: challenges/C04.md
+      - C05 Code execution: challenges/C05.md
+      - C06 Memory poisoning: challenges/C06.md
+      - C07 Bus spoofing: challenges/C07.md
+      - C08 Cascading failure: challenges/C08.md
+      - C09 Lying approval: challenges/C09.md
+      - C10 Rogue agent: challenges/C10.md
+  - Teaching:
+      - Instructor guide: INSTRUCTOR_GUIDE.md
+      - Lab safety: LAB_SAFETY.md
+  - How it works:
+      - Architecture: architecture.md
+      - SafeEnvelope: SAFEENVELOPE.md
+      - Vulnerabilities: VULNERABILITIES.md
+      - Benchmarking: BENCHMARK.md
+      - Plant simulation: plant-sim.md
+      - PLC register map: REGISTER_MAP.md
+      - Historian and HMI: historian-and-hmi.md
+      - CMMS and memory: cmms-and-memory.md
+      - Agent and MCP: agent-and-mcp.md
+  - Project:
+      - Contributing: contributing.md
+      - Authoring a challenge: CHALLENGE_AUTHORING.md
+      - Releasing: RELEASING.md
+      - Security policy: security.md

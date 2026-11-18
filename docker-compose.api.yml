@@ -1,0 +1,6 @@
+# Only for DVAP_LLM_MODE=api (./dvap adds this file): a hosted model needs a route out of the lab,
+# so the agent joins `edge` too. That also gives anything running as the agent a way out, so use
+# api mode only on a machine you control. See docs/LAB_SAFETY.md.
+services:
+  agent-operator:
+    networks: [plant, edge]

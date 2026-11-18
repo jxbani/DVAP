@@ -5,14 +5,14 @@ a student can follow is the goal.
 
 ## Ground rules
 
-These are not negotiable (from [CLAUDE.md](CLAUDE.md)):
+These are not negotiable (from [CLAUDE.md](https://github.com/jxbani/DVAP/blob/main/CLAUDE.md)):
 
 - **Everything is simulated.** Never add code that connects to a real PLC, a real industrial
   protocol on an external network, Shodan/Censys, or any host outside the lab's Docker network.
 - **Loopback only.** Only the `gateway` publishes ports (for the HMI, ticket form and scoreboard),
   and only on `127.0.0.1`; every other service stays on the internal network. `tests/test_lab_safety.py` enforces this.
 - **Every deliberate vulnerability is documented.** Mark it in code with `# DVAP-VULN: <challenge-id>`
-  and list it in [docs/VULNERABILITIES.md](docs/VULNERABILITIES.md). An undocumented weakness is a bug.
+  and list it in [docs/VULNERABILITIES.md](https://github.com/jxbani/DVAP/blob/main/docs/VULNERABILITIES.md). An undocumented weakness is a bug.
 - **No real secrets.** Use `.env.example`.
 
 ## Development setup
@@ -24,22 +24,29 @@ uv sync               # install everything, including dev tools
 make test             # pytest; uses a scripted fake LLM, no model or network needed
 uv run ruff check .
 uv run mypy
-make up               # the full lab in Docker
+make up               # the full lab in Docker, built from your checkout (docker-compose.build.yml)
 ```
+
+`./dvap up` pulls the published images instead; `./dvap up --build` builds like `make up`.
+Add a line to the `[Unreleased]` section of [CHANGELOG.md](https://github.com/jxbani/DVAP/blob/main/CHANGELOG.md) for anything a user of the
+lab would notice. Releases are cut by maintainers: [docs/RELEASING.md](https://github.com/jxbani/DVAP/blob/main/docs/RELEASING.md).
 
 The test suite starts a real virtual PLC (Modbus + OPC UA) on localhost, so it takes a few minutes.
 
 ## Adding a challenge
 
 1. `challenges/<id>/challenge.yaml` — story, objective, setup, `success_condition`, three hints, and
-   a mitigation. [docs/CHALLENGE_AUTHORING.md](docs/CHALLENGE_AUTHORING.md) describes the schema.
+   a mitigation. [docs/CHALLENGE_AUTHORING.md](https://github.com/jxbani/DVAP/blob/main/docs/CHALLENGE_AUTHORING.md) describes the schema.
 2. `challenges/<id>/solution.md` — a reference solution whose commands run as written.
 3. An automated solver in `tests/test_solvers.py` that drives the agent loop with a scripted
    `FakeLLM` and asserts the success condition fires.
 4. A scenario in `bench/scenarios.py`, and the SafeEnvelope behaviour for it in
    `tests/test_safeenvelope.py` and `tests/test_bench.py` — including when the guard does *not*
    stop it.
-5. The vulnerability in `docs/VULNERABILITIES.md` and the challenge table in `README.md`.
+5. The vulnerability in `docs/VULNERABILITIES.md`, its consequence in `CONSEQUENCE` in
+   `scripts/gen_docs.py`, and then `uv run python scripts/gen_docs.py`, which writes the challenge's
+   docs pages (spoiler-free page, separate solution page) and its row in the README table. Add the
+   page to the `nav` in `mkdocs.yml`. The test suite fails while any of these is stale.
 
 ## Pull requests
 
@@ -47,7 +54,7 @@ The test suite starts a real virtual PLC (Modbus + OPC UA) on localhost, so it t
   plus `docker compose build`).
 - Update `docs/` when behaviour changes.
 - Security-relevant changes to `docker-compose.yml` must keep `tests/test_lab_safety.py` green; if
-  you change containment on purpose, update [docs/LAB_SAFETY.md](docs/LAB_SAFETY.md) in the same PR.
-- By contributing you agree that your contribution is licensed under the [Apache License 2.0](LICENSE).
+  you change containment on purpose, update [docs/LAB_SAFETY.md](https://github.com/jxbani/DVAP/blob/main/docs/LAB_SAFETY.md) in the same PR.
+- By contributing you agree that your contribution is licensed under the [Apache License 2.0](https://github.com/jxbani/DVAP/blob/main/LICENSE).
 
-Found a way out of the lab? Don't open an issue — see [SECURITY.md](SECURITY.md).
+Found a way out of the lab? Don't open an issue — see [SECURITY.md](https://github.com/jxbani/DVAP/blob/main/SECURITY.md).

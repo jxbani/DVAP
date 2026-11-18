@@ -19,10 +19,11 @@ This page records how the lab is contained and what was checked before release.
 | Published ports | Only the `gateway` publishes ports: the HMI `127.0.0.1:8080`, ticket form `127.0.0.1:8081` and scoreboard `127.0.0.1:8090`. Nothing binds `0.0.0.0`. The port numbers can be changed (`HMI_PORT`, `CMMS_PORT`, `SCOREBOARD_PORT`); the `127.0.0.1` address is hard-coded and cannot. | `docker-compose.yml` |
 | Internal network | Every lab service is on `plant` only, declared `internal: true`: no route to the host or the internet. That includes the three UIs. | `docker-compose.yml` |
 | Ingress gateway | Docker can't publish a port from an internal-only network, so a stock reverse proxy (`nginxinc/nginx-unprivileged`, pinned) is the one lab container on `edge`. It forwards each port to one fixed UI on `plant` (`gateway/nginx.conf`); nothing a participant sends changes where it connects. It runs non-root, read-only, with all capabilities dropped. | `docker-compose.yml`, `gateway/nginx.conf` |
-| Local LLM | `ollama` is on `plant` only. Models are downloaded by the separate one-shot `ollama-pull` service (`make model`, `setup` profile), the only container with internet access, and only while it runs. | `docker-compose.yml`, `Makefile` |
+| Local LLM | `ollama` is on `plant` only. Models are downloaded by the separate one-shot `ollama-pull` service (`make model`, or `./dvap up` in `ollama` mode; `setup` profile), the only container with internet access, and only while it runs. | `docker-compose.yml`, `Makefile` |
+| Hosted model (api mode, opt-in) | `./dvap up --mode api` adds `docker-compose.api.yml`, which puts `agent-operator` (only) on `edge` so it can reach the provider. That also gives anything running as the agent a route out: use it only on a machine you control. The default modes (`replay`, `ollama`) keep the agent internal. | `docker-compose.api.yml` |
 | Diagnostic sandbox (C05) | `plant` network only; runs as `nobody` (65534); read-only root filesystem with a `tmpfs` `/tmp`; `cap_drop: [ALL]`; `no-new-privileges`; `pids_limit: 128`; `mem_limit: 256m`. | `docker-compose.yml` |
 | Privileges | No container is `privileged`; none mounts the Docker socket. The only host paths mounted are `./challenges` (read-only, scoreboard) and `./gateway/nginx.conf` (read-only, gateway). | `docker-compose.yml` |
-| Secrets | None in the repo. The flag secret defaults to a public dev value — set `DVAP_FLAG_SECRET` for any real CTF. See `.env.example`. | `.env.example` |
+| Secrets | None in the repo. The flag secret defaults to a public dev value; `./dvap up` writes a random one into a new `.env`, and the scoreboard refuses to mint flags for a CTF team on a public value. API keys (api mode) live only in the git-ignored `.env`. | `.env.example` |
 
 ### Why Ollama is not on `edge`
 
@@ -76,4 +77,4 @@ docker inspect "$(docker compose ps -q sandbox)" --format '{{.Config.User}} ro={
 
 A deliberate vulnerability listed in [VULNERABILITIES.md](VULNERABILITIES.md) is not a bug. A way
 to get **out** of the lab — reaching the host or the internet from inside it, or a published port
-that isn't loopback-only — is. Please report it privately; see [SECURITY.md](../SECURITY.md).
+that isn't loopback-only — is. Please report it privately; see [SECURITY.md](https://github.com/jxbani/DVAP/blob/main/SECURITY.md).

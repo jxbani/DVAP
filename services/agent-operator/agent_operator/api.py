@@ -17,7 +17,7 @@ from mcp.client.streamable_http import streamablehttp_client
 from pydantic import BaseModel
 
 from agent_operator.agent import Agent
-from agent_operator.llm import LiteLLMClient
+from agent_operator.llm import LLM, LiteLLMClient, ReplayLLM
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("agent-operator")
@@ -33,7 +33,9 @@ AUTOSTART = os.environ.get("AGENT_AUTOSTART", "1") == "1"
 state: dict = {}
 
 
-def llm_from_env() -> LiteLLMClient:
+def llm_from_env() -> LLM:
+    if MODEL == "replay":  # recorded responses, no model needed (DVAP_LLM_MODE=replay)
+        return ReplayLLM()
     # Ollama needs an api_base; hosted providers (anthropic/*, openai/*) ignore it and use their keys.
     kwargs = {"api_base": OLLAMA_API_BASE} if MODEL.startswith("ollama/") else {}
     return LiteLLMClient(MODEL, **kwargs)
