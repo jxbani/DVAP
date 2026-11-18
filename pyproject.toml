@@ -40,6 +40,10 @@ dev = [
 docs = [
     "mkdocs-material>=9.8.1",
 ]
+media = [
+    "imageio-ffmpeg>=0.8.1",
+    "playwright>=1.65.2",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

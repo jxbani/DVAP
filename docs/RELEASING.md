@@ -71,6 +71,33 @@ Releases come from `main`, with CI green.
    DVAP_TAG=vX.Y.Z scripts/verify_fresh_install.sh     # a given one
    ```
 
+## Re-recording the demo media
+
+The README's GIF, the talk video and the social preview are generated from a live run of
+`./dvap demo --auto`, so re-record them after a release that changes the HMI, the agent or the demo:
+
+```bash
+uv sync --group media                                   # Playwright and a bundled ffmpeg (not in the normal install)
+uv run --group media playwright install chromium        # once per machine
+uv run --group media python scripts/record_demo.py      # about 5 minutes
+```
+
+The script builds and starts the lab from your checkout with the agent in replay mode (your `.env`
+is not changed), records the HMI's presenter view in headless Chromium at 1280×720 while the demo
+runs, stops the lab, and writes:
+
+| File | What |
+|---|---|
+| `docs/assets/demo.gif` | ~15 s loop of the key moment (ticket → tank rises → PHYSICAL INCIDENT), 960 px, under 5 MB; in the README and docs home |
+| `docs/assets/demo-full.mp4` | the whole staged demo, H.264 720p, with captions; for talks and social media |
+| `docs/assets/social-preview.png` | 1280×640, the incident with the title. GitHub has no API for it: upload it under **Settings → General → Social preview** |
+
+Check the three files, then commit them. `tests/test_docs.py` fails if the GIF reaches 5 MB or the
+preview isn't 1280×640. The demo runs the plant clock at 6× real time; the captions say so.
+
+The `media` group's ffmpeg comes from `imageio-ffmpeg`, a static GPL build. It only runs on your
+machine to encode these files; it is never shipped in the images or the release zip.
+
 ## Verifying a release (anyone)
 
 ```bash

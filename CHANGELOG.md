@@ -31,6 +31,8 @@ entries for the people running the lab. How to cut a release: [docs/RELEASING.md
   DENIED by SafeEnvelope), with `--auto` for recording, `--challenge C01|C02` and `--live`. The
   previous one-attack demo is `./dvap demo --quick`. The HMI has a presenter layout
   (`?presenter=1`).
+- Demo media generated from a live run (`scripts/record_demo.py`, optional `media` dependency
+  group): the README's demo GIF, a full demo video and the GitHub social preview.
 - The `./dvap` CLI (`dvap.ps1` on Windows): `up`, `down`, `reset`, `status`, `logs`, `doctor`,
   `demo`, `bench`, `version`, `update`, with a first-run wizard.
 - Three LLM modes: `replay` (recorded responses, no model), `ollama` (local model) and `api`
