@@ -28,10 +28,10 @@ branch `pre-release-check`; no features were added.
 | `./dvap down` | pass, 7 s |
 | Workflows on `main` | CI, CodeQL, Scorecard: pass. **Docs: fail**: the build passes, but deploy fails because GitHub Pages is not enabled (repository setting, not code). Release, Fresh install, Weekly solvers: never run yet |
 | Dependabot PRs | #2 nginx, #3 actions, #4 python minor/patch: CI green. **#5 `mcp` 1.30 → 2.3: CI fails**: a major release that moves `FastMCP`, renames `streamablehttp_client` and drops `create_connected_server_and_client_session`. `main` is locked to 1.30 and unaffected; migrating is post-release work, not a pre-release fix |
-| Docs site https://jxbani.github.io/DVAP/ | **not live (404)**: same cause as the Docs failure |
-| README links | new `scripts/check_links.py`: all 34 resolve against the docs build; live, the 20 docs-site links 404 until Pages is on. Added to the Docs workflow (against the build on PRs, live after each deploy) |
+| Docs site https://jxbani.github.io/DVAP/ | was 404 (same cause). **Fixed**: Pages enabled (source: GitHub Actions), Docs rerun on `main`: build and deploy pass, site live |
+| README links | new `scripts/check_links.py`: all 34 resolve against the docs build, and live once Pages was on. Added to the Docs workflow (against the build on PRs, live after each deploy) |
 
-**Before tagging:** enable Pages (Settings → Pages → Source: GitHub Actions) and rerun Docs; rename
+**Before tagging:** rename
 `[Unreleased]` in CHANGELOG.md; after the release, make the ghcr.io packages public and watch the
 Fresh install workflow; decide on #5 (close, or pin `mcp<2` in Dependabot until a migration).
 
