@@ -36,6 +36,7 @@ On Windows without WSL, use `.\dvap.ps1` wherever these pages say `./dvap`.
 | `./dvap up [--mode replay\|ollama\|api] [--build]` | Start the lab; `--mode` switches the LLM mode, `--build` builds images from source |
 | `./dvap down` | Stop the lab (keeps all data) |
 | `./dvap reset` / `./dvap reset C01` | Wipe all lab state but keep the model / reset one challenge in place |
+| `./dvap defend` / `./dvap defend --off` | SafeEnvelope on / off for the running challenge: its defended variant |
 | `./dvap status` | Containers, LLM mode, and whether each UI answers |
 | `./dvap logs [service]` | Follow the logs, e.g. `./dvap logs agent-operator` |
 | `./dvap doctor` | Check the machine; prints the fix for every failure |

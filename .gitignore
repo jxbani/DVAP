@@ -10,3 +10,6 @@ __pycache__/
 .gstack/
 results/
 dist/
+
+# Local launch drafts (announcements, outreach): never committed
+launch/

@@ -10,8 +10,13 @@ entries for the people running the lab. How to cut a release: [docs/RELEASING.md
 
 ## [Unreleased]
 
+## [0.9.0-beta.1] - 2026-11-19
+
 ### Added
 
+- The beta kit: a tester guide (docs/BETA_TESTING.md), a beta feedback issue form, and
+  `scripts/beta_report.py` to summarise the reports.
+- `./dvap defend [--off]`: SafeEnvelope on or off for the running challenge, without `make`.
 - A simulated water-treatment plant (plant-sim, 10 Hz, deterministic per seed) behind a virtual
   PLC speaking Modbus/TCP and OPC UA, with an HMI, historian, CMMS ticket system, Valkey message
   bus, maintenance-planner agent and a third-party vendor MCP server.
@@ -31,6 +36,8 @@ entries for the people running the lab. How to cut a release: [docs/RELEASING.md
   DENIED by SafeEnvelope), with `--auto` for recording, `--challenge C01|C02` and `--live`. The
   previous one-attack demo is `./dvap demo --quick`. The HMI has a presenter layout
   (`?presenter=1`).
+- Demo media generated from a live run (`scripts/record_demo.py`, optional `media` dependency
+  group): the README's demo GIF, a full demo video and the GitHub social preview.
 - The `./dvap` CLI (`dvap.ps1` on Windows): `up`, `down`, `reset`, `status`, `logs`, `doctor`,
   `demo`, `bench`, `version`, `update`, with a first-run wizard.
 - Three LLM modes: `replay` (recorded responses, no model), `ollama` (local model) and `api`
@@ -52,4 +59,5 @@ entries for the people running the lab. How to cut a release: [docs/RELEASING.md
 - Every image and GitHub Action is pinned by digest or commit SHA, and Python dependencies by
   `uv.lock`; CI fails on any fixable CRITICAL vulnerability in DVAP's images.
 
-[Unreleased]: https://github.com/jxbani/DVAP/commits/main
+[Unreleased]: https://github.com/jxbani/DVAP/compare/v0.9.0-beta.1...HEAD
+[0.9.0-beta.1]: https://github.com/jxbani/DVAP/releases/tag/v0.9.0-beta.1
