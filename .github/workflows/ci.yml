@@ -45,14 +45,18 @@ jobs:
     name: docker compose build + smoke test
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      COMPOSE_FILE: docker-compose.yml:docker-compose.build.yml # build this commit, don't pull
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - run: docker compose config --quiet
       - run: docker compose build
+      - run: ./dvap doctor || true # informational: what a first-time user on this runner would see
       # The lab without the model and the agent (neither is needed for these checks): the gateway
       # pulls in the UIs, and mcp-plant pulls in the PLC, plant, sandbox, bus and the rest.
       - run: docker compose up -d --wait gateway mcp-plant
       - run: python3 scripts/smoke_test.py
+      - run: ./dvap status
       - if: failure()
         run: docker compose logs --tail 100
       - if: always()

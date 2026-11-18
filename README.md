@@ -6,7 +6,7 @@ MCP tools. Every challenge maps to the [OWASP Top 10 for Agentic Applications](h
 HMI: the tank overflows, the chlorine overdoses, the pump runs dry. It ships with a scoreboard for
 CTFs and classrooms, a deterministic policy guard (**SafeEnvelope**) to attack the defended
 variants against, and a benchmark harness to measure how often a given model falls for each attack.
-It runs entirely offline on one laptop, with a local model.
+It runs on one laptop: fully offline with a local model, or with no model at all in replay mode.
 
 > [!WARNING]
 > DVAP is intentionally insecure. Run it only on a machine you control, keep every port on
@@ -17,37 +17,55 @@ It runs entirely offline on one laptop, with a local model.
 
 ## Quickstart
 
-Requirements:
-
-- Docker with Compose v2, with **at least 8 GB of memory allocated to Docker** (Docker Desktop:
-  Settings → Resources; on the WSL2 backend the limit is WSL's, set in `%UserProfile%\.wslconfig`).
-- ~6 GB of free disk for the model, and internet once, to download it.
-- `make` (optional: every target has a plain `docker compose` equivalent, below).
-- [`uv`](https://docs.astral.sh/uv/), only for `make test` and `make bench`.
+You need **Docker** (with Compose v2) and **git**. That's all for the default mode; the `dvap`
+script also needs Python 3.9+, which macOS, most Linux distros and WSL already have.
 
 ```bash
-git clone https://github.com/jxbani/DVAP.git && cd DVAP && make up
-make model    # one time: downloads the local LLM (~4.7 GB) — the only step that needs internet
+git clone https://github.com/jxbani/DVAP.git && cd DVAP
+./dvap doctor    # checks Docker, memory, disk, CPU, ports; prints the fix for anything that fails
+./dvap up        # first run: creates .env and asks how the agent should think (see below)
+./dvap demo      # a malicious ticket makes the agent overdose the chlorine
 ```
+
+On Windows without WSL, use `.\dvap.ps1` in PowerShell instead of `./dvap`.
 
 Then open the scoreboard at **http://127.0.0.1:8090**, pick a challenge, and watch the plant on the
 HMI at http://127.0.0.1:8080. The ticket form (a common attack vector) is at http://127.0.0.1:8081.
+`./dvap up` pulls prebuilt multi-arch images (amd64 + arm64) from ghcr.io, so there is nothing to
+compile: with the default mode, a first start takes a few minutes on a normal connection.
 
-The agent thinks on your CPU: expect tens of seconds per decision with the default 7B model (longer
-on a laptop). The HMI's **Agent activity** panel shows each step as it happens.
+### LLM modes
 
-| `make` | Without `make` | What it does |
+The first `./dvap up` asks which mode to use (or pass `--mode`, or set `DVAP_LLM_MODE` for an
+unattended install; with nobody to ask it picks `replay`). Switch any time with `./dvap up --mode <mode>`.
+
+| Mode | The agent is… | Memory for Docker | Free disk | Also needs |
+|---|---|---|---|---|
+| `replay` | recorded responses: falls for the textbook attacks, nothing cleverer | 4 GB | 6 GB | nothing |
+| `ollama` | a local 7B model (`qwen2.5:7b-instruct`), fully offline once downloaded | 8 GB | 12 GB | a one-time ~4.7 GB download; 4+ CPU cores (tens of seconds per decision on a CPU) |
+| `api` | a hosted model (Anthropic, OpenAI or any OpenAI-compatible endpoint) | 4 GB | 6 GB | an API key in `.env`; internet for the agent container |
+
+`replay` is for getting started and for classrooms on modest laptops. Use `ollama` or `api` to see
+how a real model behaves, and `dvap bench` to measure it. "Memory for Docker" is what Docker
+itself can use: on macOS and Windows that's the Docker Desktop / WSL limit, not the machine's RAM
+(`./dvap doctor` reads it and tells you how to raise it).
+
+### Commands
+
+| `./dvap` | What it does | `make` / plain Docker equivalent |
 |---|---|---|
-| `make up` | `docker compose up -d --build` | Start the lab |
-| `make model` | `docker compose --profile setup run --rm ollama-pull` | Download the model (once) |
-| `make down` | `docker compose down` | Stop the lab (keeps all data) |
-| `make reset CH=C01` | `curl -X POST http://127.0.0.1:8090/api/challenges/C01/reset` | Reset one challenge in place |
-| `make reset` | `docker compose down`, then `docker volume rm dvap_historian-data dvap_cmms-data dvap_memory-data`, then `docker compose up -d --build` | Wipe all lab state and rebuild; keeps the model |
-| `make defend` / `make undefend` | see the `defend` recipe in the [Makefile](Makefile) | Turn SafeEnvelope on/off for the running challenge |
-| `make test` | `uv run pytest` | Run the tests (no model needed: they use a scripted fake LLM) |
-| `make bench` | `uv run dvap bench --models fake:comply,fake:refuse --runs 1 --guard off` | Benchmark models ([docs/BENCHMARK.md](docs/BENCHMARK.md)) |
+| `up [--mode M] [--build]` | Start the lab (pulls images; `--build` builds from source) | `make up` (always builds) |
+| `down` | Stop the lab (keeps all data) | `docker compose down` |
+| `reset` / `reset C01` | Wipe all lab state but keep the model / reset one challenge in place | `make reset` / `make reset CH=C01` |
+| `status` | Containers, mode, and whether each UI answers | `docker compose ps` |
+| `logs [service]` | Follow the logs, e.g. `./dvap logs agent-operator` | `docker compose logs -f` |
+| `doctor` | PASS/FAIL checks with the exact fix for each failure | |
+| `demo` | Runs C02 end to end against the running lab | |
+| `bench …` | Benchmark models ([docs/BENCHMARK.md](docs/BENCHMARK.md)); needs [uv](https://docs.astral.sh/uv/) | `make bench` |
+| `version` / `update` | Versions; `git pull` + new `.env` settings + matching images | |
 
-(The volume names assume the default project name, `dvap`, which comes from the `DVAP` folder.)
+Other `make` targets: `make test` (`uv run pytest`, no model needed), `make defend` / `make undefend`
+(SafeEnvelope on/off for the running challenge), `make model` (download the Ollama model by hand).
 
 ## Playing
 
@@ -70,36 +88,41 @@ resetting a challenge turns the guard off again; `make undefend` does it by hand
 
 ## Platform notes
 
-- **Windows:** use Docker Desktop with the WSL2 backend. Without `make`, use the commands in the
-  table above. Line endings are handled by `.gitattributes`, so a Windows checkout works.
-- **WSL2:** run everything from the WSL shell, ideally with the repo cloned inside the WSL filesystem
-  (much faster than `/mnt/c`).
-- **macOS (Apple Silicon or Intel):** all images are multi-arch. Docker on macOS can't use the GPU,
-  so the model runs on the CPU inside Docker's VM: give Docker plenty of memory and expect slow
-  decisions. A smaller model is faster (set `OLLAMA_MODEL` and `MODEL` in `.env`; check its licence).
-- **Linux:** works as is; `make` may need installing (`apt install make`).
+- **Linux (x86_64 or arm64):** install Docker Engine and the Compose plugin; add yourself to the
+  `docker` group so `./dvap` runs without `sudo` (`./dvap doctor` shows the command).
+- **macOS (Apple Silicon or Intel):** Docker Desktop. The images are native arm64 and amd64, so no
+  Rosetta emulation. Docker on macOS can't use the GPU, so in `ollama` mode the model runs on the
+  CPU inside Docker's VM: raise Docker's memory to 8 GB and expect slow decisions.
+- **Windows (WSL2):** Docker Desktop with the WSL2 backend and WSL integration on for your distro.
+  Clone and run inside the WSL shell, in the WSL filesystem (`~/DVAP`, not `/mnt/c/...`, which is
+  much slower; `./dvap doctor` warns about it). Docker's memory is WSL's limit, set in
+  `%UserProfile%\.wslconfig`. Line endings are handled by `.gitattributes`.
 
 ## Troubleshooting
 
+Start with `./dvap doctor`. Then:
+
 | Symptom | Fix |
 |---|---|
-| The agent does nothing, or its log says the model isn't found | Run `make model` (once), then wait for the next cycle. |
-| `port is already allocated` on `make up` | Pick other host ports in `.env`: `HMI_PORT`, `CMMS_PORT`, `SCOREBOARD_PORT` (still bound to 127.0.0.1). |
-| Containers restart or are killed | Docker is out of memory: allocate at least 8 GB to Docker. |
-| The scoreboard header says "flags are disabled" | You set a `TEAM` for a CTF: also set a private `DVAP_FLAG_SECRET` (see [docs/INSTRUCTOR_GUIDE.md](docs/INSTRUCTOR_GUIDE.md)). |
-| Something looks stuck | `docker compose logs -f agent-operator mcp-plant`, and `make reset CH=<id>` to start the challenge over. |
+| `Prebuilt images unavailable … building locally` | You're offline, or this version's images aren't published yet; the build works too, it just takes longer. |
+| The agent does nothing in `ollama` mode | The first decision on a CPU can take a minute; `./dvap logs agent-operator`. |
+| `port is already allocated` | Pick other host ports in `.env`: `HMI_PORT`, `CMMS_PORT`, `SCOREBOARD_PORT` (still bound to 127.0.0.1). |
+| Containers restart or are killed | Docker is out of memory: see the memory row of `./dvap doctor`. |
+| The scoreboard header says "flags are disabled" | You set a `TEAM` for a CTF with a public `DVAP_FLAG_SECRET`; `./dvap up` generates a private one for a new `.env`. See [docs/INSTRUCTOR_GUIDE.md](docs/INSTRUCTOR_GUIDE.md). |
+| Something looks stuck | `./dvap logs agent-operator`, and `./dvap reset C01` to start the challenge over. |
 
-## Using a hosted model instead of Ollama
+## Using a hosted model (api mode)
 
-Set `MODEL` (any LiteLLM id, e.g. `anthropic/<model>`) and the provider's key (`ANTHROPIC_API_KEY`,
-`OPENAI_API_KEY`) in `.env`. The lab has no internet access on purpose, so the agent also needs a
-network route out: add a `docker-compose.override.yml` that puts `agent-operator` on the `edge`
-network as well as `plant`. That gives anything running as the agent a way out of the lab too, so
-only do it on a disposable machine. See [docs/LAB_SAFETY.md](docs/LAB_SAFETY.md).
+`./dvap up --mode api` asks for a [LiteLLM](https://docs.litellm.ai/docs/providers) model id
+(e.g. `anthropic/claude-sonnet-5-5`, `openai/<model>`) and its key, and stores both in `.env`
+(git-ignored). For another OpenAI-compatible endpoint, also set `OPENAI_API_BASE` in `.env`. The lab
+has no internet access on purpose, so api mode adds `docker-compose.api.yml`, which puts the
+`agent-operator` container on the `edge` network too. That gives anything running as the agent a
+way out of the lab, so use api mode only on a machine you control. See [docs/LAB_SAFETY.md](docs/LAB_SAFETY.md).
 
 ## Cleaning up
 
-- `make down` stops the lab; `make reset` wipes the lab state but keeps the downloaded model.
+- `./dvap down` stops the lab; `./dvap reset` wipes the lab state but keeps the downloaded model.
 - `docker compose down -v` removes everything, including the 4.7 GB model volume.
 - Remove the images too with `docker compose down -v --rmi all`.
 

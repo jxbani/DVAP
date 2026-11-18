@@ -5,8 +5,10 @@
 defend undefend:
 	docker compose exec -T mcp-plant python -c 'import json, urllib.request as u; r = u.Request("http://localhost:8000/reset", data=json.dumps({"defended": "$@" == "defend"}).encode(), headers={"content-type": "application/json"}); print(u.urlopen(r).read().decode())'
 
+# make builds DVAP's images from source (contributors); ./dvap up pulls the prebuilt ones.
+BUILD = docker compose -f docker-compose.yml -f docker-compose.build.yml
 up:
-	docker compose up -d --build
+	$(BUILD) up -d --build
 
 # Download the agent's model once (the only step that needs internet). OLLAMA_MODEL overrides it.
 model:
@@ -34,7 +36,7 @@ ifndef CH
 	docker compose down
 	@project=$$(docker compose config | sed -n 's/^name: //p'); \
 	for v in $(LAB_STATE_VOLUMES); do docker volume rm -f "$${project}_$$v"; done
-	docker compose up -d --build
+	$(BUILD) up -d --build
 else
 	curl -fsS -X POST http://127.0.0.1:8090/api/challenges/$(CH)/reset && echo " reset $(CH)"
 endif

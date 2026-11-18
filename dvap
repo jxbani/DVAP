@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# DVAP command line (Linux, macOS, WSL2). Usage: ./dvap <command>, e.g. ./dvap doctor, ./dvap up
+# Lifecycle commands need only Python 3.9+ (stdlib); `bench` needs uv for the full dependencies.
+set -euo pipefail
+cd "$(dirname "$0")"
+if [ "${1:-}" = bench ] && command -v uv >/dev/null 2>&1; then exec uv run --quiet dvap "$@"; fi
+for py in python3 python; do
+  if command -v "$py" >/dev/null 2>&1 && "$py" -c 'import sys; sys.exit(sys.version_info < (3, 9))' 2>/dev/null; then
+    exec "$py" -m bench "$@"
+  fi
+done
+if command -v uv >/dev/null 2>&1; then exec uv run --quiet --no-project --python 3.12 python -m bench "$@"; fi
+echo "dvap needs Python 3.9+ or uv (https://docs.astral.sh/uv/getting-started/installation/)." >&2
+exit 1

@@ -11,9 +11,12 @@ DVAP is built for a university lab session, a conference workshop or a CTF. This
 
 The model download is ~4.7 GB; do not leave it to conference Wi-Fi.
 
-1. Install Docker (Compose v2) and `make`; have ~8 GB of free RAM.
-2. `git clone https://github.com/jxbani/DVAP.git && cd DVAP && make up && make model`
-3. Open http://127.0.0.1:8090 — the scoreboard should list 11 challenges — and
+1. Install Docker (Compose v2) and git.
+2. `git clone https://github.com/jxbani/DVAP.git && cd DVAP && ./dvap doctor`, and fix anything it
+   marks FAIL (it prints the fix).
+3. `./dvap up --mode ollama` (downloads the model once; Docker needs 8 GB of memory). On a laptop
+   that can't, `./dvap up --mode replay` needs no model and 4 GB.
+4. `./dvap demo`, then open http://127.0.0.1:8090 — the scoreboard should list 11 challenges — and
    http://127.0.0.1:8080, where the HMI should show the plant running.
 
 On CPU a 7B model takes tens of seconds per agent decision; that is fine, the HMI shows every step.
@@ -74,7 +77,7 @@ TEAM=team07
 DVAP_FLAG_SECRET=<long random string; keep it from participants until the end>
 ```
 
-Then `make up`. Each team's scoreboard mints flags like `DVAP{C03_9f2c...}` as they solve challenges.
+Then `./dvap up`. Each team's scoreboard mints flags like `DVAP{C03_9f2c...}` as they solve challenges.
 
 ### Several teams on one host
 
