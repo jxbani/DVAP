@@ -7,6 +7,7 @@ abstract: >-
   (ASI01-ASI10) with physical consequences, plus a deterministic policy guard (SafeEnvelope)
   and a model benchmark harness.
 type: software
+repository-code: "https://github.com/jxbani/DVAP"
 authors:
   - name: "The DVAP Authors"
 version: 0.1.0

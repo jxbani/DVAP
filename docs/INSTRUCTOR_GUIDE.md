@@ -12,7 +12,7 @@ DVAP is built for a university lab session, a conference workshop or a CTF. This
 The model download is ~4.7 GB; do not leave it to conference Wi-Fi.
 
 1. Install Docker (Compose v2) and `make`; have ~8 GB of free RAM.
-2. `git clone https://github.com/OWNER/dvap.git && cd dvap && make up && make model`
+2. `git clone https://github.com/jxbani/DVAP.git && cd DVAP && make up && make model`
 3. Open http://127.0.0.1:8090 — the scoreboard should list 11 challenges — and
    http://127.0.0.1:8080, where the HMI should show the plant running.
 

@@ -20,7 +20,7 @@ It runs entirely offline on one laptop, with a local model.
 Requirements: Docker with Compose v2, `make`, ~8 GB of free RAM and ~6 GB of disk for the model.
 
 ```bash
-git clone https://github.com/OWNER/dvap.git && cd dvap && make up
+git clone https://github.com/jxbani/DVAP.git && cd DVAP && make up
 make model    # one time: downloads the local LLM (~4.7 GB) — the only step that needs internet
 ```
 
