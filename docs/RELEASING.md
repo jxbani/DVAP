@@ -57,10 +57,18 @@ Releases come from `main`, with CI green.
    ```
 7. Watch the **Release** workflow (Actions tab). When it finishes, check the release page: notes,
    `dvap-X.Y.Z.zip`, and 11 `*.spdx.json` files.
-8. Smoke-test the published artefacts on a clean machine:
+8. Make the ghcr.io packages public if they aren't yet (the first release creates them private).
+   Then watch the **Fresh install** workflow, which starts when Release succeeds. It downloads
+   the zip and the published images anonymously, the way a new user would, on Ubuntu, in an
+   Ubuntu container driving the host's Docker (the closest GitHub gets to WSL2) and on Intel macOS
+   with colima. Each runs `./dvap doctor`, `./dvap up --mode replay`, solves C01 through the ticket
+   form, checks the HMI reports the OVERFLOW incident, and fails if that took over 15 minutes.
+   `macos-latest` (Apple Silicon) has no Docker on GitHub, so it only checks that the zip's CLI runs
+   and that doctor reports the missing Docker. The same check runs weekly, and by hand from the
+   Actions tab for any tag. On any machine with Docker:
    ```bash
-   unzip dvap-X.Y.Z.zip && cd dvap-X.Y.Z
-   ./dvap doctor && ./dvap up --mode replay && ./dvap demo
+   scripts/verify_fresh_install.sh                     # the latest release
+   DVAP_TAG=vX.Y.Z scripts/verify_fresh_install.sh     # a given one
    ```
 
 ## Verifying a release (anyone)

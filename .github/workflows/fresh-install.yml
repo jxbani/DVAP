@@ -1,0 +1,114 @@
+name: Fresh install
+
+# Installs DVAP the way a new user would: the latest release zip (not this repository) and the
+# published images, then ./dvap doctor, ./dvap up --mode replay, C01 solved through the public
+# ticket form until the HMI reports the PHYSICAL INCIDENT, ./dvap down. Fails if the time to the
+# first solved challenge exceeds 15 minutes. All the logic is in scripts/verify_fresh_install.sh.
+#
+# Runs after every successful release, weekly (catches upstream images or registries breaking an
+# old release), and by hand (optionally for a given tag).
+
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  schedule:
+    - cron: "0 7 * * 1" # Mondays 07:00 UTC
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to test, e.g. v0.1.0 (empty: the latest release)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  # The tag that was just released, a hand-picked tag, or empty for the latest release.
+  DVAP_TAG: ${{ inputs.tag || github.event.workflow_run.head_branch || '' }}
+  GH_TOKEN: ${{ github.token }} # only sent to api.github.com, against its anonymous rate limit
+  BUDGET_SECONDS: "900"
+
+jobs:
+  linux:
+    name: ubuntu-latest
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: # only the test script; the lab itself comes from the release zip
+          persist-credentials: false
+          sparse-checkout: scripts/verify_fresh_install.sh
+          sparse-checkout-cone-mode: false
+      - run: bash scripts/verify_fresh_install.sh
+
+  wsl-like:
+    # What WSL2 + Docker Desktop looks like from inside the distro: a plain Ubuntu userland with only
+    # the docker CLI, talking to a daemon that lives outside it, and the lab's 127.0.0.1 ports
+    # reachable from the distro. Not real WSL: the kernel isn't Microsoft's, so doctor's WSL-only
+    # advice (.wslconfig, /mnt/c) isn't exercised.
+    name: WSL-like (Ubuntu container, host Docker)
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/verify_fresh_install.sh
+          sparse-checkout-cone-mode: false
+      - name: Run the check inside ubuntu:24.04
+        # The workspace is mounted at the same path, because the host daemon resolves the lab's
+        # bind mounts (gateway/nginx.conf, challenges/) against host paths.
+        run: |
+          docker run --rm --network host \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -w "$GITHUB_WORKSPACE" \
+            -e DVAP_TAG -e GH_TOKEN -e BUDGET_SECONDS -e WORK_DIR="$GITHUB_WORKSPACE/fresh" \
+            ubuntu:24.04 bash -c '
+              apt-get update -qq &&
+              DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+                ca-certificates curl unzip python3 docker.io docker-compose-v2 >/dev/null &&
+              bash scripts/verify_fresh_install.sh'
+
+  macos-intel:
+    # Full run on macOS. GitHub's Intel macOS runners can run a Linux VM, so Docker comes from
+    # colima (Docker Desktop can't be installed unattended).
+    name: macos-15-intel (colima)
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: macos-15-intel
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/verify_fresh_install.sh
+          sparse-checkout-cone-mode: false
+      - name: Install Docker (colima)
+        run: |
+          brew install colima docker docker-compose
+          mkdir -p ~/.docker/cli-plugins
+          ln -sfn "$(brew --prefix)/opt/docker-compose/bin/docker-compose" ~/.docker/cli-plugins/docker-compose
+          colima start --cpu 3 --memory 8 --disk 40
+          docker version
+      - run: bash scripts/verify_fresh_install.sh
+
+  macos-latest:
+    # macos-latest is Apple Silicon, and GitHub's Apple Silicon runners have no nested
+    # virtualization, so no Docker. This job checks what still can be: the release zip's CLI runs
+    # on macOS and doctor names the missing Docker with the right fix.
+    name: macos-latest (CLI only, no Docker on this runner)
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/verify_fresh_install.sh
+          sparse-checkout-cone-mode: false
+      - run: bash scripts/verify_fresh_install.sh
+        env:
+          NO_DOCKER: "1"

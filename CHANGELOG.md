@@ -24,6 +24,9 @@ entries for the people running the lab. How to cut a release: [docs/RELEASING.md
   variants of the challenges.
 - `dvap bench`: benchmarks models (and the guard) against every challenge, with JSON, CSV and HTML
   reports.
+- A fresh-install check (`scripts/verify_fresh_install.sh`, the Fresh install workflow): the
+  release zip and published images on Ubuntu, a WSL-like container and Intel macOS, from download
+  to C01's overflow in under 15 minutes.
 - The `./dvap` CLI (`dvap.ps1` on Windows): `up`, `down`, `reset`, `status`, `logs`, `doctor`,
   `demo`, `bench`, `version`, `update`, with a first-run wizard.
 - Three LLM modes: `replay` (recorded responses, no model), `ollama` (local model) and `api`
