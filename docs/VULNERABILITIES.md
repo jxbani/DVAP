@@ -19,7 +19,7 @@ the simulated lab network. In code they are marked with `# DVAP-VULN: <challenge
 
 Also by design, and the reason several of the above are reachable: Modbus/TCP has no
 authentication, the OPC UA server accepts anonymous sessions with no security policy, and the
-`bus` Redis instance has no password (the C07 attack surface).
+`bus` (Valkey, a Redis-compatible server) has no password (the C07 attack surface).
 
 ## The defence: SafeEnvelope
 

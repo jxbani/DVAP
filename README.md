@@ -57,7 +57,7 @@ flowchart TB
       plc["plc<br/>Modbus/TCP + OPC UA"]
       sim["plant-sim<br/>10 Hz physics"]
       hist["historian"]
-      bus[("bus<br/>Redis")]
+      bus[("bus<br/>Valkey (Redis)")]
       sandbox["sandbox<br/>hardened"]
     end
   end

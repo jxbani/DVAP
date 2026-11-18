@@ -10,6 +10,7 @@ x-healthcheck: &healthcheck
 services:
   plant-sim:
     build: { context: ., args: { SERVICE: plant-sim, PACKAGE: plant_sim } }
+    image: dvap-plant-sim:${DVAP_VERSION:-0.1.0}
     environment:
       PLANT_SEED: ${PLANT_SEED:-0}
       PLANT_NOISE: ${PLANT_NOISE:-0}
@@ -18,6 +19,7 @@ services:
 
   plc:
     build: { context: ., args: { SERVICE: plc, PACKAGE: plc, MODULE: main } }
+    image: dvap-plc:${DVAP_VERSION:-0.1.0}
     environment:
       PLANT_URL: http://plant-sim:8000
       PLC_DIFFICULTY: ${PLC_DIFFICULTY:-easy} # easy | medium | hard
@@ -28,6 +30,7 @@ services:
 
   historian:
     build: { context: ., args: { SERVICE: historian, PACKAGE: historian } }
+    image: dvap-historian:${DVAP_VERSION:-0.1.0}
     environment:
       PLC_HOST: plc
       HISTORIAN_DB: /data/historian.sqlite
@@ -38,8 +41,10 @@ services:
     healthcheck: *healthcheck
 
   # Inter-agent message bus. No password: deliberate, used by later challenges.
+  # Valkey: the BSD-licensed, Redis-compatible fork (Redis 7.4+ is RSAL/SSPL). Same protocol and
+  # tools (redis-cli works), so the lab and its challenges still speak "Redis".
   bus:
-    image: redis:7-alpine
+    image: valkey/valkey:9.1.3-alpine@sha256:bf09d58e96d6b4524a15396b65b242bbe18beebbcc15a04d8ee75ddac62fae0b
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     networks: [plant]
     healthcheck:
@@ -51,6 +56,7 @@ services:
   # Maintenance tickets. No authentication (DVAP-VULN: C01): this is where participants inject text.
   cmms:
     build: { context: ., args: { SERVICE: cmms, PACKAGE: cmms } }
+    image: dvap-cmms:${DVAP_VERSION:-0.1.0}
     environment:
       CMMS_DB: /data/cmms.sqlite
     volumes: [cmms-data:/data]
@@ -60,6 +66,7 @@ services:
 
   hmi:
     build: { context: ., args: { SERVICE: hmi, PACKAGE: hmi } }
+    image: dvap-hmi:${DVAP_VERSION:-0.1.0}
     environment:
       PLANT_URL: http://plant-sim:8000
       HISTORIAN_URL: http://historian:8000
@@ -76,6 +83,7 @@ services:
   # can edit without a rebuild) and resets every service per challenge.
   scoreboard:
     build: { context: ., args: { SERVICE: scoreboard, PACKAGE: scoreboard } }
+    image: dvap-scoreboard:${DVAP_VERSION:-0.1.0}
     environment:
       TEAM: ${TEAM:-solo}
       DVAP_FLAG_SECRET: ${DVAP_FLAG_SECRET:-dvap-dev-secret}
@@ -99,6 +107,7 @@ services:
   # shell inside it can reach the PLC over Modbus, which is the point of the C05 challenge.
   sandbox:
     build: { context: ., args: { SERVICE: sandbox, PACKAGE: sandbox } }
+    image: dvap-sandbox:${DVAP_VERSION:-0.1.0}
     networks: [plant]
     # Hardened: it runs attacker-controlled shell commands (C05). See docs/LAB_SAFETY.md.
     user: "65534:65534" # nobody
@@ -114,6 +123,7 @@ services:
   # poisoned, rug-pulling instruction channel. Internal network only.
   vendor-analytics:
     build: { context: ., args: { SERVICE: vendor-analytics, PACKAGE: vendor_analytics, MODULE: server } }
+    image: dvap-vendor-analytics:${DVAP_VERSION:-0.1.0}
     networks: [plant]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -124,6 +134,7 @@ services:
   # MCP server: the only way the agent touches the plant. Internal network only.
   mcp-plant:
     build: { context: ., args: { SERVICE: mcp-plant, PACKAGE: mcp_plant, MODULE: main } }
+    image: dvap-mcp-plant:${DVAP_VERSION:-0.1.0}
     environment:
       PLC_HOST: plc
       CMMS_URL: http://cmms:8000
@@ -149,6 +160,7 @@ services:
   # The victim LLM agent. Talks to the plant only through mcp-plant.
   agent-operator:
     build: { context: ., args: { SERVICE: agent-operator, PACKAGE: agent_operator, MODULE: api } }
+    image: dvap-agent-operator:${DVAP_VERSION:-0.1.0}
     environment:
       MCP_URL: http://mcp-plant:8000/mcp
       VENDOR_MCP_URL: http://vendor-analytics:8000/mcp # third-party server (C04)
@@ -169,6 +181,7 @@ services:
   # Second agent: issues work orders to the operator over the unauthenticated Redis bus (C07).
   maintenance-planner:
     build: { context: ., args: { SERVICE: maintenance-planner, PACKAGE: maintenance_planner } }
+    image: dvap-maintenance-planner:${DVAP_VERSION:-0.1.0}
     environment:
       REDIS_URL: redis://bus:6379
     depends_on:
@@ -181,7 +194,7 @@ services:
   # are fetched by the one-shot `ollama-pull` service below (`make model`). Runs on CPU unless a
   # GPU is wired in (uncomment the deploy block). The agent then runs fully offline.
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.40.16@sha256:910d0d8107b538fb0894e63163eb195de0cc7aefcbc666dc62d3b18f71124592
     volumes: [ollama-models:/root/.ollama]
     networks: [plant]
     healthcheck:
@@ -197,7 +210,7 @@ services:
   # One-shot model download, the only container with internet access, and only while it runs.
   # It writes into the same volume the internal `ollama` reads. Not started by `make up`.
   ollama-pull:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.40.16@sha256:910d0d8107b538fb0894e63163eb195de0cc7aefcbc666dc62d3b18f71124592
     profiles: [setup]
     volumes: [ollama-models:/root/.ollama]
     networks: [edge]

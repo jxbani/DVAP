@@ -15,7 +15,7 @@ An intentionally vulnerable, fully simulated industrial plant (water treatment) 
 - historian: time-series log of process values (SQLite) with a query API.
 - agent-operator: the victim LLM agent. Talks to the plant only through MCP tools served by mcp-plant.
 - mcp-plant: MCP server (official `mcp` Python SDK, FastMCP) exposing operator tools.
-- bus: Redis, used for inter-agent messaging (deliberately unauthenticated in some challenges).
+- bus: Valkey (BSD-licensed, Redis-compatible), used for inter-agent messaging (deliberately unauthenticated in some challenges).
 - scoreboard: challenge engine, reset logic, flags, scoring UI.
 - safeenvelope: deterministic policy guard between the MCP tools and the PLC, enforced inline in
   mcp-plant (see docs/SAFEENVELOPE.md). Off by default; a challenge's defended variant turns it on.

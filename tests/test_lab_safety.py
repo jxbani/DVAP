@@ -2,6 +2,7 @@
 cannot quietly widen the lab (no Docker needed to run this)."""
 
 import os
+import tomllib
 from pathlib import Path
 
 import yaml
@@ -60,6 +61,21 @@ def test_scripts_copied_into_images_have_no_carriage_returns():
     assert scripts
     for script in scripts:
         assert b"\r" not in script.read_bytes(), f"{script} has CRLF line endings"
+
+
+def test_images_are_pinned():
+    """Reproducible builds: third-party images by digest, DVAP's own images by DVAP_VERSION, no
+    floating :latest anywhere."""
+    dockerfile = Path("Dockerfile").read_text(encoding="utf-8")
+    assert "@sha256:" in next(line for line in dockerfile.splitlines() if line.startswith("FROM "))
+    version = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+    for name, svc in SERVICES.items():
+        image = svc["image"]
+        assert ":latest" not in image, f"{name} floats on :latest"
+        if "build" in svc:
+            assert image == f"dvap-{name}:${{DVAP_VERSION:-{version}}}", f"{name} is not tagged with DVAP_VERSION"
+        else:
+            assert "@sha256:" in image, f"{name} third-party image is not pinned by digest"
 
 
 def test_make_reset_keeps_the_downloaded_model():
