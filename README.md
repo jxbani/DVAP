@@ -39,9 +39,10 @@ HMI at http://127.0.0.1:8080. The ticket form (a common attack vector) is at htt
 ```mermaid
 flowchart TB
   user(["You, on 127.0.0.1"])
+  gateway["gateway<br/>reverse proxy, the only published service"]
 
   subgraph lab["Lab: internal Docker network, no internet"]
-    subgraph ui["Published on 127.0.0.1"]
+    subgraph ui["UIs"]
       scoreboard["scoreboard :8090"]
       hmi["hmi :8080"]
       cmms["cmms :8081<br/>tickets, untrusted"]
@@ -62,7 +63,7 @@ flowchart TB
     end
   end
 
-  user --> ui
+  user --> gateway --> ui
   agent --> ollama
   agent -->|MCP| vendor
   agent -->|MCP| mcp

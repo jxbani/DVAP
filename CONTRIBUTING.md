@@ -9,8 +9,8 @@ These are not negotiable (from [CLAUDE.md](CLAUDE.md)):
 
 - **Everything is simulated.** Never add code that connects to a real PLC, a real industrial
   protocol on an external network, Shodan/Censys, or any host outside the lab's Docker network.
-- **Loopback only.** Only the HMI, ticket form and scoreboard publish ports, and only on
-  `127.0.0.1`. `tests/test_lab_safety.py` enforces this.
+- **Loopback only.** Only the `gateway` publishes ports (for the HMI, ticket form and scoreboard),
+  and only on `127.0.0.1`; every other service stays on the internal network. `tests/test_lab_safety.py` enforces this.
 - **Every deliberate vulnerability is documented.** Mark it in code with `# DVAP-VULN: <challenge-id>`
   and list it in [docs/VULNERABILITIES.md](docs/VULNERABILITIES.md). An undocumented weakness is a bug.
 - **No real secrets.** Use `.env.example`.

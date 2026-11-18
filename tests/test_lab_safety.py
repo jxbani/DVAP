@@ -2,6 +2,7 @@
 cannot quietly widen the lab (no Docker needed to run this)."""
 
 import os
+import re
 import tomllib
 from pathlib import Path
 
@@ -22,8 +23,9 @@ def test_published_ports_are_loopback_only():
             assert str(port).startswith("127.0.0.1:"), f"{name} publishes {port!r} beyond loopback"
 
 
-def test_only_the_three_ui_services_publish_ports():
-    assert {n for n, s in SERVICES.items() if s.get("ports")} == {"hmi", "cmms", "scoreboard"}
+def test_only_the_gateway_publishes_ports():
+    assert {n for n, s in SERVICES.items() if s.get("ports")} == {"gateway"}
+    assert len(SERVICES["gateway"]["ports"]) == 3  # HMI, ticket form, scoreboard
 
 
 def test_lab_network_is_internal_and_every_lab_service_is_on_it():
@@ -33,9 +35,23 @@ def test_lab_network_is_internal_and_every_lab_service_is_on_it():
             assert "plant" in nets(svc), f"{name} is not on the internal plant network"
 
 
-def test_only_ui_services_touch_the_internet_facing_network():
+def test_no_vulnerable_service_touches_the_internet_facing_network():
+    """Only the gateway (a stock reverse proxy) and the one-shot model download are on `edge`;
+    every vulnerable service, the UIs included, is internal-only."""
     on_edge = {n for n, s in SERVICES.items() if "edge" in nets(s)}
-    assert on_edge == {"hmi", "cmms", "scoreboard"} | SETUP_ONLY
+    assert on_edge == {"gateway"} | SETUP_ONLY
+    for ui in ("hmi", "cmms", "scoreboard"):
+        assert nets(SERVICES[ui]) == {"plant"}
+
+
+def test_gateway_is_hardened_and_only_forwards_to_the_three_uis():
+    gw = SERVICES["gateway"]
+    assert gw["read_only"] is True and gw["cap_drop"] == ["ALL"]
+    assert "no-new-privileges:true" in gw["security_opt"]
+    conf = Path("gateway/nginx.conf").read_text(encoding="utf-8")
+    upstreams = set(re.findall(r"set \$upstream http://([a-z-]+):8000;", conf))
+    assert upstreams == {"hmi", "cmms", "scoreboard"}
+    assert conf.count("proxy_pass") == 3  # no other forwarding target
 
 
 def test_model_download_is_separated_from_the_lab():

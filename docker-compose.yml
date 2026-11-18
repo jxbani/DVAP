@@ -1,5 +1,6 @@
 # DVAP lab. Everything is simulated and stays on the internal `plant` network.
-# Only the HMI, CMMS ticket form, scoreboard and guard dashboard may publish ports, and only on 127.0.0.1.
+# Only the `gateway` publishes ports (HMI with its guard panel, CMMS ticket form, scoreboard), and
+# only on 127.0.0.1. tests/test_lab_safety.py enforces these rules.
 
 x-healthcheck: &healthcheck
   test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -60,8 +61,7 @@ services:
     environment:
       CMMS_DB: /data/cmms.sqlite
     volumes: [cmms-data:/data]
-    networks: [plant, edge] # `edge` only so the ticket form can be published
-    ports: ["127.0.0.1:${CMMS_PORT:-8081}:8000"] # loopback only, never 0.0.0.0 (the IP is not configurable)
+    networks: [plant] # published through the gateway, never directly
     healthcheck: *healthcheck
 
   hmi:
@@ -74,9 +74,7 @@ services:
     depends_on:
       historian: { condition: service_healthy }
       bus: { condition: service_healthy }
-    # `plant` to reach the lab, `edge` only so the port below can be published.
-    networks: [plant, edge]
-    ports: ["127.0.0.1:${HMI_PORT:-8080}:8000"] # loopback only, never 0.0.0.0 (the IP is not configurable)
+    networks: [plant] # published through the gateway, never directly
     healthcheck: *healthcheck
 
   # Challenge engine, reset, flags and scoring UI. Reads challenges/ (bind-mounted so authors
@@ -98,9 +96,33 @@ services:
     volumes: ["./challenges:/app/challenges:ro"]
     depends_on:
       bus: { condition: service_healthy }
-    networks: [plant, edge] # `edge` only so the UI port can be published
-    ports: ["127.0.0.1:${SCOREBOARD_PORT:-8090}:8000"] # loopback only, never 0.0.0.0 (the IP is not configurable)
+    networks: [plant] # published through the gateway, never directly
     healthcheck: *healthcheck
+
+  # The only way in from the host. It is the only lab container on `edge` (the internet-facing
+  # network that port publishing needs) and it proxies each port to one UI on `plant`, so no
+  # vulnerable service has a route out of the lab. Fixed upstreams: gateway/nginx.conf.
+  gateway:
+    image: nginxinc/nginx-unprivileged:1.30.6-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03
+    volumes: ["./gateway/nginx.conf:/etc/nginx/nginx.conf:ro"]
+    networks: [plant, edge]
+    ports: # loopback only, never 0.0.0.0 (the IP is not configurable, only the port numbers)
+      - "127.0.0.1:${HMI_PORT:-8080}:8080"
+      - "127.0.0.1:${CMMS_PORT:-8081}:8081"
+      - "127.0.0.1:${SCOREBOARD_PORT:-8090}:8090"
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      hmi: { condition: service_healthy }
+      cmms: { condition: service_healthy }
+      scoreboard: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8090/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   # Diagnostic sandbox. The blast radius for run_diagnostic command injection (C05).
   # On the internal `plant` network (no `edge`, so no internet): confined to the lab, but a
