@@ -1,4 +1,4 @@
-# Beta testing DVAP 0.9
+# Beta testing DVAP
 
 Thank you for testing! The beta runs for **two weeks**. We want to know whether a newcomer can
 install DVAP from a release, without help, and whether the challenges teach what they should.
@@ -27,8 +27,8 @@ Please test the way a new user would: on a **clean machine** (or a fresh VM or u
 from the **release zip**, not a git clone. Time it, from the download to `./dvap up` finishing.
 
 1. Install Docker for your OS: see [Installation](installation.md). Note anything that differs.
-2. Download `dvap-0.9.0-beta.1.zip` from the
-   [releases page](https://github.com/jxbani/DVAP/releases) (it's marked *Pre-release*).
+2. Download `dvap-<version>.zip` from the release you were invited to test on the
+   [releases page](https://github.com/jxbani/DVAP/releases) (a beta is marked *Pre-release*).
 3. Unzip it, open a terminal in the folder, and start the lab:
    ```bash
    ./dvap up

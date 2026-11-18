@@ -1,7 +1,7 @@
 """Build dist/dvap-<version>.zip: everything needed to run DVAP from the published images,
 without cloning (the release workflow attaches it to the GitHub Release).
 
-    python3 scripts/make_dist.py 0.9.0-beta.1
+    python3 scripts/make_dist.py 1.0.0
 
 The version is DVAP's SemVer version (pre-releases too), and must be .env.example's DVAP_VERSION:
 the zip's .env.example decides which images it pulls.

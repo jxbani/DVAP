@@ -10,7 +10,7 @@
 # Settings (environment variables, all optional):
 #   DVAP_REPO       GitHub repository to download from          (default jxbani/DVAP)
 #   DVAP_TAG        release tag, e.g. v0.9.0-beta.1              (default: latest release, else newest pre-release)
-#   DVAP_ZIP        use this local zip instead of downloading    (e.g. dist/dvap-0.9.0-beta.1.zip)
+#   DVAP_ZIP        use this local zip instead of downloading    (e.g. dist/dvap-1.0.0.zip)
 #   WORK_DIR        where to unzip                               (default: a new temp dir)
 #   BUDGET_SECONDS  time-to-first-challenge limit                (default 900 = 15 min)
 #   GH_TOKEN        sent to api.github.com only, to avoid its anonymous rate limit
