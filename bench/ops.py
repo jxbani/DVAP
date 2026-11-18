@@ -319,11 +319,9 @@ def demo(timeout: float = 180) -> int:
 
 
 def project_version() -> str:
-    pyproject = ROOT / "pyproject.toml"
-    if not pyproject.exists():  # a release download ships .env.example, whose DVAP_VERSION matches
-        return read_env(ENV_EXAMPLE).get("DVAP_VERSION", "unknown")
-    m = re.search(r'^version\s*=\s*"([^"]+)"', pyproject.read_text(encoding="utf-8"), re.MULTILINE)
-    return m.group(1) if m else "unknown"
+    """DVAP's SemVer version (0.9.0-beta.1), the same in a clone and a release download. pyproject.toml
+    has the PEP 440 spelling (0.9.0b1); scripts/release_version.py keeps the two in step."""
+    return read_env(ENV_EXAMPLE).get("DVAP_VERSION", "unknown")
 
 
 def version() -> int:

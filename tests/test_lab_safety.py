@@ -3,7 +3,6 @@ cannot quietly widen the lab (no Docker needed to run this)."""
 
 import os
 import re
-import tomllib
 from pathlib import Path
 
 import yaml
@@ -85,7 +84,8 @@ def test_images_are_pinned():
     floating :latest anywhere."""
     dockerfile = Path("Dockerfile").read_text(encoding="utf-8")
     assert "@sha256:" in next(line for line in dockerfile.splitlines() if line.startswith("FROM "))
-    version = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+    version = next(line.split("=", 1)[1] for line in Path(".env.example").read_text(encoding="utf-8").splitlines()
+                   if line.startswith("DVAP_VERSION="))  # SemVer, as the image tags are
     for name, svc in SERVICES.items():
         image = svc["image"]
         assert ":latest" not in image, f"{name} floats on :latest"

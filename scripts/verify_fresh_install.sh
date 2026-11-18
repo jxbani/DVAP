@@ -9,8 +9,8 @@
 #
 # Settings (environment variables, all optional):
 #   DVAP_REPO       GitHub repository to download from          (default jxbani/DVAP)
-#   DVAP_TAG        release tag, e.g. v0.1.0                     (default: the latest release)
-#   DVAP_ZIP        use this local zip instead of downloading    (e.g. dist/dvap-0.1.0.zip)
+#   DVAP_TAG        release tag, e.g. v0.9.0-beta.1              (default: latest release, else newest pre-release)
+#   DVAP_ZIP        use this local zip instead of downloading    (e.g. dist/dvap-0.9.0-beta.1.zip)
 #   WORK_DIR        where to unzip                               (default: a new temp dir)
 #   BUDGET_SECONDS  time-to-first-challenge limit                (default 900 = 15 min)
 #   GH_TOKEN        sent to api.github.com only, to avoid its anonymous rate limit
@@ -42,11 +42,20 @@ if [ -n "${DVAP_ZIP:-}" ]; then
   step "Using local zip $DVAP_ZIP"
   cp "$DVAP_ZIP" "$WORK/"
 else
-  api="https://api.github.com/repos/$REPO/releases/${DVAP_TAG:+tags/$DVAP_TAG}"
-  [ -n "${DVAP_TAG:-}" ] || api="${api}latest"
+  releases="https://api.github.com/repos/$REPO/releases"
   auth=(); [ -n "${GH_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $GH_TOKEN")
-  step "Finding the release zip: $api"
-  release=$(curl -fsSL "${auth[@]}" "$api") || fail "no release found at $api (is one published?)"
+  if [ -n "${DVAP_TAG:-}" ]; then
+    step "Finding the release zip: $releases/tags/$DVAP_TAG"
+    release=$(curl -fsSL "${auth[@]}" "$releases/tags/$DVAP_TAG") || fail "no release $DVAP_TAG (is it published?)"
+  elif release=$(curl -fsSL "${auth[@]}" "$releases/latest" 2>/dev/null); then
+    step "Found the latest release: $(printf '%s' "$release" | json "d['tag_name']")"
+  else
+    # GitHub never calls a pre-release "latest": before the first stable release, test the newest one.
+    release=$(curl -fsSL "${auth[@]}" "$releases?per_page=10" | json \
+      "__import__('json').dumps(next((r for r in d if not r['draft']), {}))") || fail "could not list $releases"
+    [ "$release" != "{}" ] || fail "no release published at $releases"
+    step "No stable release yet; testing the newest pre-release: $(printf '%s' "$release" | json "d['tag_name']")"
+  fi
   url=$(printf '%s' "$release" | json \
     "next((a['browser_download_url'] for a in d['assets'] if a['name'].startswith('dvap-') and a['name'].endswith('.zip')), '')")
   [ -n "$url" ] || fail "release $(printf '%s' "$release" | json "d['tag_name']") has no dvap-<version>.zip asset"
