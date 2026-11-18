@@ -1,6 +1,7 @@
 """The containment rules from docs/LAB_SAFETY.md, checked against docker-compose.yml so a change
 cannot quietly widen the lab (no Docker needed to run this)."""
 
+import os
 from pathlib import Path
 
 import yaml
@@ -50,6 +51,14 @@ def test_sandbox_is_hardened():
     assert "no-new-privileges:true" in sb["security_opt"]
     assert sb["user"] != "0" and not str(sb["user"]).startswith("0:")
     assert sb.get("pids_limit") and sb.get("mem_limit")
+
+
+def test_litellm_never_fetches_catalogs_on_its_own():
+    """The agent must not reach outside the lab (CLAUDE.md hard rule): LiteLLM's self-initiated
+    downloads are disabled before it can be imported."""
+    import agent_operator.llm  # noqa: F401
+
+    assert os.environ["LITELLM_OFFLINE_MODE"] == "true"
 
 
 def test_no_privileged_containers_or_docker_socket():
