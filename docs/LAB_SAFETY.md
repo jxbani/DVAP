@@ -77,4 +77,4 @@ docker inspect "$(docker compose ps -q sandbox)" --format '{{.Config.User}} ro={
 
 A deliberate vulnerability listed in [VULNERABILITIES.md](VULNERABILITIES.md) is not a bug. A way
 to get **out** of the lab — reaching the host or the internet from inside it, or a published port
-that isn't loopback-only — is. Please report it privately; see [SECURITY.md](../SECURITY.md).
+that isn't loopback-only — is. Please report it privately; see [SECURITY.md](https://github.com/jxbani/DVAP/blob/main/SECURITY.md).

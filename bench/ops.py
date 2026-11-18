@@ -37,7 +37,8 @@ DEFAULT_API_MODEL = "anthropic/claude-sonnet-5-5"
 # --- .env ------------------------------------------------------------------
 
 
-def read_env(path: Path = ENV) -> dict[str, str]:
+def read_env(path: Path | None = None) -> dict[str, str]:
+    path = path or ENV  # looked up at call time, so tests can point ENV elsewhere
     env = {}
     if path.exists():
         for line in path.read_text(encoding="utf-8").splitlines():
@@ -47,8 +48,9 @@ def read_env(path: Path = ENV) -> dict[str, str]:
     return env
 
 
-def write_env(updates: dict[str, str], path: Path = ENV) -> None:
+def write_env(updates: dict[str, str], path: Path | None = None) -> None:
     """Set keys in place (keeping comments and order); append the ones the file lacks."""
+    path = path or ENV
     lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
     todo = dict(updates)
     for i, line in enumerate(lines):
@@ -208,7 +210,14 @@ def up(mode: str | None = None, build: bool = False, skip_checks: bool = False) 
         print("\nNote: api mode gives the agent container a route to the internet (docker-compose.api.yml).")
     if mode_of(env) == "ollama":
         ensure_model(env)
+    can_build = (ROOT / "docker-compose.build.yml").exists()  # absent in a release download
+    if build and not can_build:
+        print("--build needs the source: git clone https://github.com/jxbani/DVAP.git")
+        return 1
     if not build and run(compose_cmd(env, "pull", "--quiet"), check=False) != 0:
+        if not can_build:
+            print("Could not pull DVAP's images: check your connection and DVAP_VERSION in .env.")
+            return 1
         print("Prebuilt images unavailable (offline, or not published for this version): building locally.")
         build = True
     run(compose_cmd(env, "up", "-d", "--wait", "--wait-timeout", "300", *(["--build"] if build else []), build=build))
@@ -309,7 +318,10 @@ def demo(timeout: float = 180) -> int:
 
 
 def project_version() -> str:
-    m = re.search(r'^version\s*=\s*"([^"]+)"', (ROOT / "pyproject.toml").read_text(encoding="utf-8"), re.MULTILINE)
+    pyproject = ROOT / "pyproject.toml"
+    if not pyproject.exists():  # a release download ships .env.example, whose DVAP_VERSION matches
+        return read_env(ENV_EXAMPLE).get("DVAP_VERSION", "unknown")
+    m = re.search(r'^version\s*=\s*"([^"]+)"', pyproject.read_text(encoding="utf-8"), re.MULTILINE)
     return m.group(1) if m else "unknown"
 
 
@@ -327,6 +339,10 @@ def version() -> int:
 
 def update() -> int:
     """Pull the new source, carry new settings into .env, then pull the matching images."""
+    if not (ROOT / ".git").exists():
+        print("This is a release download. Get the new dvap-<version>.zip from "
+              "https://github.com/jxbani/DVAP/releases, unzip it, and copy your .env into it.")
+        return 1
     if run(["git", "pull", "--ff-only"], check=False) != 0:
         print("git pull failed (local changes, or a diverged branch): resolve it, then rerun ./dvap update")
         return 1

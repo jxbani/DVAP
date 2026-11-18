@@ -6,11 +6,11 @@ checked before it can reach the plant. No LLM is ever in the enforcement path â€
 only from the policy, the live PLC readings and a pure physics forecast, so they are repeatable
 and auditable.
 
-It lives in [`services/mcp-plant/mcp_plant/safeenvelope/`](../services/mcp-plant/mcp_plant/safeenvelope/)
+It lives in [`services/mcp-plant/mcp_plant/safeenvelope/`](https://github.com/jxbani/DVAP/tree/main/services/mcp-plant/mcp_plant/safeenvelope/)
 and is enforced inline inside mcp-plant (that is where the Modbus write happens); there is no
 separate network proxy, because a sidecar could not intercept the in-process writes without
 rearchitecting the service. The policy numbers live in
-[`policies/plant.yaml`](../services/mcp-plant/mcp_plant/safeenvelope/policies/plant.yaml).
+[`policies/plant.yaml`](https://github.com/jxbani/DVAP/blob/main/services/mcp-plant/mcp_plant/safeenvelope/policies/plant.yaml).
 
 ## On / off (toggleable per challenge)
 

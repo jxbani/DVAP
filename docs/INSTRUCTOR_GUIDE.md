@@ -50,7 +50,7 @@ the projector.
 | 1:10–1:20 | Break | |
 | 1:20–2:05 | **Privilege, supply chain, code, memory** — C03, C04, C05, C06 | Teams choose two. Debrief C03 vs C09 (who approved what?) and C06 (an attack that waits a shift). |
 | 2:05–2:35 | **Multi-agent and humans** — C07, C08, C09, C10 | Teams choose two. Debrief: trust between agents, a forged sensor, a misleading approval, a task that keeps coming back. |
-| 2:35–2:55 | **Defence** | Start a solved challenge again, run `make defend`, repeat the attack and watch the SafeEnvelope panel deny it with a reason. Then try C07 defended — it is *not* blocked. Discuss [What SafeEnvelope does NOT protect against](../README.md#what-safeenvelope-does-not-protect-against). |
+| 2:35–2:55 | **Defence** | Start a solved challenge again, run `make defend`, repeat the attack and watch the SafeEnvelope panel deny it with a reason. Then try C07 defended — it is *not* blocked. Discuss [What SafeEnvelope does NOT protect against](https://github.com/jxbani/DVAP/blob/main/README.md#what-safeenvelope-does-not-protect-against). |
 | 2:55–3:00 | Wrap-up | Map each solved challenge to its ASI category; point to `docs/VULNERABILITIES.md` and the mitigations in each `challenge.yaml`. |
 
 Tips:

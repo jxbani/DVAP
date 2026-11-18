@@ -1,0 +1,45 @@
+# The documentation site (docs/), published to GitHub Pages by .github/workflows/docs.yml.
+# Local preview: uv run --group docs mkdocs serve
+site_name: DVAP — Damn Vulnerable Agentic Plant
+site_description: A simulated water-treatment plant run by an LLM agent, for the OWASP Top 10 for Agentic Applications.
+site_url: https://jxbani.github.io/DVAP/
+repo_url: https://github.com/jxbani/DVAP
+repo_name: jxbani/DVAP
+edit_uri: edit/main/docs/
+docs_dir: docs
+exclude_docs: |
+  RELEASE_AUDIT.md
+theme:
+  name: material
+  features: [navigation.sections, content.code.copy]
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle: { icon: material/brightness-4, name: Dark mode }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle: { icon: material/brightness-7, name: Light mode }
+markdown_extensions:
+  - admonition
+  - tables
+  - toc: { permalink: true }
+  - pymdownx.superfences:
+      custom_fences:
+        - { name: mermaid, class: mermaid, format: !!python/name:pymdownx.superfences.fence_code_format }
+nav:
+  - Home: index.md
+  - Using DVAP:
+      - Lab safety: LAB_SAFETY.md
+      - Instructor guide: INSTRUCTOR_GUIDE.md
+      - Vulnerabilities: VULNERABILITIES.md
+      - SafeEnvelope: SAFEENVELOPE.md
+      - Benchmarking: BENCHMARK.md
+  - How it works:
+      - Plant simulation: plant-sim.md
+      - PLC register map: REGISTER_MAP.md
+      - Historian and HMI: historian-and-hmi.md
+      - CMMS and memory: cmms-and-memory.md
+      - Agent and MCP: agent-and-mcp.md
+  - Contributing:
+      - Authoring a challenge: CHALLENGE_AUTHORING.md
+      - Releasing: RELEASING.md

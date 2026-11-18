@@ -280,6 +280,14 @@ run `make bench ARGS="--models ollama/qwen2.5:7b-instruct --runs 5 --guard off"`
 [docs/INSTRUCTOR_GUIDE.md](docs/INSTRUCTOR_GUIDE.md) has a 3-hour workshop plan, CTF setup for
 multiple teams, and a grading guide.
 
+## Releases
+
+Each release on the [releases page](https://github.com/jxbani/DVAP/releases) has notes from
+[CHANGELOG.md](CHANGELOG.md), a `dvap-<version>.zip` that runs the lab without cloning (unzip, then
+`./dvap up`), and an SBOM per image. The images on ghcr.io are signed with cosign and carry
+build-provenance attestations; [docs/RELEASING.md](docs/RELEASING.md#verifying-a-release-anyone)
+shows how to verify them. Full docs: https://jxbani.github.io/DVAP/
+
 ## Contributing, security and licence
 
 - [CONTRIBUTING.md](CONTRIBUTING.md) — development setup and how to add a challenge.

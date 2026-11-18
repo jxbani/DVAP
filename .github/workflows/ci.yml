@@ -18,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           python-version: "3.12"
@@ -32,32 +34,84 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           python-version: "3.12"
-          version: "0.13.5" # uv itself, pinned
+          version: "0.13.5"
       - run: uv sync --locked
-      # The suite needs no model or network: the agent runs on a scripted FakeLLM, and the PLC,
-      # plant and services run in-process on localhost.
-      - run: uv run pytest -q
+      # No model or network needed: the agent runs on a scripted FakeLLM, and the PLC, plant and
+      # services run in-process on localhost. The solvers have their own job below.
+      - run: uv run pytest -q --ignore=tests/test_solvers.py
+
+  solvers:
+    name: challenge solvers (fake LLM)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with:
+          python-version: "3.12"
+          version: "0.13.5"
+      - run: uv sync --locked
+      - name: Reference attack for every challenge (tests/test_solvers.py)
+        run: uv run pytest -v tests/test_solvers.py
+      - name: Every challenge falls to the scripted attacker, and none to the refusing one
+        run: |
+          uv run dvap bench --models fake:comply,fake:refuse --runs 1 --guard off --out results
+          python3 - <<'EOF'
+          import json, pathlib, sys
+          run = sorted(pathlib.Path("results").glob("*/results.json"))[-1]
+          rows = json.loads(run.read_text())["results"]
+          bad = [(r["model"], r["challenge"], r["success_rate"]) for r in rows
+                 if r["success_rate"] != (1.0 if r["model"] == "fake:comply" else 0.0)]
+          print(f"{len(rows)} model x challenge results in {run}")
+          sys.exit(f"unexpected outcomes: {bad}" if bad else 0)
+          EOF
 
   compose:
-    name: docker compose build + smoke test
+    name: build images, full stack, live demo, Trivy
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     env:
       COMPOSE_FILE: docker-compose.yml:docker-compose.build.yml # build this commit, don't pull
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - run: docker compose config --quiet
-      - run: docker compose build
-      - run: ./dvap doctor || true # informational: what a first-time user on this runner would see
-      # The lab without the model and the agent (neither is needed for these checks): the gateway
-      # pulls in the UIs, and mcp-plant pulls in the PLC, plant, sandbox, bus and the rest.
-      - run: docker compose up -d --wait gateway mcp-plant
+      - name: Build all DVAP images
+        run: docker compose build
+      - run: ./dvap doctor
+      # The whole lab in replay mode (the default without a .env: no model to download).
+      # --wait blocks until every service's healthcheck, i.e. its /health endpoint, passes.
+      - name: Start everything and wait for every /health
+        run: docker compose up -d --wait --wait-timeout 300
       - run: python3 scripts/smoke_test.py
+      - name: Live attack against the running lab (C02 via the ticket form, replay agent)
+        run: ./dvap demo --timeout 120
       - run: ./dvap status
       - if: failure()
         run: docker compose logs --tail 100
       - if: always()
         run: docker compose down -v
+      - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.76.2 # trivy itself, pinned
+          cache: true
+      - name: Trivy scan of the images DVAP ships (fail on CRITICAL)
+        # --ignore-unfixed: a CRITICAL with no fixed package yet can't be acted on; it fails the
+        # build as soon as a fix exists. Third-party images (valkey, nginx, ollama) are pinned by
+        # digest and updated by Dependabot; scanning them is upstream's job.
+        run: |
+          status=0
+          for image in $(docker compose config --images | grep '/dvap-'); do
+            echo "::group::$image"
+            trivy image --scanners vuln --severity CRITICAL --ignore-unfixed --exit-code 1 --no-progress "$image" || status=1
+            echo "::endgroup::"
+          done
+          exit $status

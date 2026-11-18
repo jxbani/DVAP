@@ -28,8 +28,8 @@ make up               # the full lab in Docker, built from your checkout (docker
 ```
 
 `./dvap up` pulls the published images instead; `./dvap up --build` builds like `make up`.
-Releases: bump `version` in pyproject.toml and `DVAP_VERSION` in .env.example, then push a
-`v<version>` tag; `.github/workflows/release.yml` publishes the multi-arch images to ghcr.io.
+Add a line to the `[Unreleased]` section of [CHANGELOG.md](CHANGELOG.md) for anything a user of the
+lab would notice. Releases are cut by maintainers: [docs/RELEASING.md](docs/RELEASING.md).
 
 The test suite starts a real virtual PLC (Modbus + OPC UA) on localhost, so it takes a few minutes.
 

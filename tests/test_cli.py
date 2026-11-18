@@ -14,6 +14,15 @@ from bench import cli, doctor, ops
 GOOD_INFO = {"ServerVersion": "27.3.1", "MemTotal": 16 * doctor.GB, "Architecture": "aarch64", "DockerRootDir": "/nope"}
 
 
+@pytest.fixture(autouse=True)
+def real_env_is_untouched():
+    """The developer's own .env must survive these tests (ops writes .env for real)."""
+    real = ops.ROOT / ".env"
+    before = real.read_bytes() if real.exists() else None
+    yield
+    assert (real.read_bytes() if real.exists() else None) == before, "a test wrote to the real .env"
+
+
 @pytest.fixture
 def envfiles(tmp_path, monkeypatch):
     example = tmp_path / ".env.example"
