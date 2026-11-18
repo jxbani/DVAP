@@ -182,3 +182,15 @@ async def test_mcp_tool_result_summary_is_published(deps):
         await client.call_tool("read_process_values", {})
     summary = next(e for e in bus.published if e["type"] == "tool_result")["summary"]
     assert "level" in summary and "chlorine" in summary
+
+
+async def test_a_blocked_call_is_published_as_blocked_not_as_done(deps, lab):
+    """With SafeEnvelope on, the agent panel must not claim a write that never reached the PLC."""
+    from mcp_plant.safeenvelope import SafeEnvelope, load_policy
+
+    deps.guard = SafeEnvelope(load_policy(), read_state=lambda: read_all(lab.modbus))
+    bus = EventBus()
+    async with connect(build_server(deps, bus)._mcp_server) as client:
+        await client.call_tool("set_setpoint", {"tag": "level_sp", "value": 100})
+    summary = next(e for e in bus.published if e["type"] == "tool_result")["summary"]
+    assert summary == "BLOCKED by SafeEnvelope (deny): level_sp=100 is outside the safe range [20, 85]"

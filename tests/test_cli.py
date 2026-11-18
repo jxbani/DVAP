@@ -9,7 +9,7 @@ import socket
 import pytest
 
 from agent_operator.llm import ReplayLLM
-from bench import cli, doctor, ops
+from bench import cli, doctor, ops, stage
 
 GOOD_INFO = {"ServerVersion": "27.3.1", "MemTotal": 16 * doctor.GB, "Architecture": "aarch64", "DockerRootDir": "/nope"}
 
@@ -138,7 +138,8 @@ def test_ollama_model_manifest_paths():
 def test_every_command_parses():
     p = cli.build_parser()
     for argv in (["up", "--mode", "api", "--build"], ["down"], ["reset"], ["reset", "C01"], ["status"],
-                 ["logs"], ["logs", "agent-operator"], ["doctor"], ["demo"], ["version"], ["update"],
+                 ["logs"], ["logs", "agent-operator"], ["doctor"], ["demo"], ["demo", "--auto", "--challenge", "C02"],
+                 ["demo", "--quick", "--timeout", "60"], ["demo", "--live"], ["version"], ["update"],
                  ["bench", "--models", "fake:comply"]):
         assert p.parse_args(argv).command == argv[0]
 
@@ -328,3 +329,80 @@ def free_port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
+
+
+# --- the staged demo (./dvap demo) -------------------------------------------------------------
+
+
+@pytest.mark.parametrize("cid", list(stage.SCENARIOS))
+async def test_staged_demo_tickets_trigger_the_pinned_recordings(cid):
+    """The demo runs on recorded responses: its ticket must match one, or nothing happens on stage."""
+    sc = stage.SCENARIOS[cid]
+    reply = await ReplayLLM().chat(snapshot(sc.benign + sc.injected), [])
+    tag, value = {"C01": ("level_sp", 100.0), "C02": ("chlorine_sp", 9.0)}[cid]
+    assert reply.tool_calls and reply.tool_calls[0].arguments == {"tag": tag, "value": value}
+
+
+def test_quick_and_staged_demo_route_to_their_implementations(monkeypatch):
+    calls: list[tuple] = []
+    monkeypatch.setattr(ops, "demo", lambda timeout: calls.append(("quick", timeout)) or 0)
+    monkeypatch.setattr(stage, "run", lambda c, auto, live: calls.append(("staged", c, auto, live)) or 0)
+    assert cli.main(["demo", "--quick", "--timeout", "9"]) == 0
+    assert cli.main(["demo", "--auto", "--challenge", "C02"]) == 0
+    assert calls == [("quick", 9.0), ("staged", "C02", True, False)]
+
+
+class FakeLab:
+    """Just enough of a running lab for stage.run: the guard denies (or not) and the plant has an
+    incident only while the guard is off."""
+
+    def __init__(self, guard_denies: bool):
+        self.guard_denies, self.defended = guard_denies, False
+        self.calls: list[tuple] = []
+        self.guard_events: list[dict] = []
+
+    def service(self, env, name, path, body=None, timeout=60):
+        self.calls.append((name, path, body))
+        if (name, path) == ("mcp-plant", "/reset"):
+            self.defended = body["defended"]
+        if (name, path) == ("agent-operator", "/cycle") and self.defended and self.guard_denies:
+            self.guard_events.append({"action": "deny", "tool": "set_setpoint", "args": {"tag": "level_sp", "value": 100},
+                                      "reason": "level_sp=100 is outside the safe range [20, 85]",
+                                      "provenance": ["ticket:2"]})
+        return {"model": "replay"} if path == "/health" else {}
+
+    def wait_incident(self, hmi, name, seconds):
+        return 12.0 if not self.defended or not self.guard_denies else None
+
+
+@pytest.mark.parametrize("guard_denies", [True, False])
+def test_staged_demo_passes_only_on_incident_then_blocked(monkeypatch, envfiles, capsys, guard_denies):
+    ops.load_env(interactive=False)
+    lab = FakeLab(guard_denies)
+
+    class Listener:
+        def __init__(self, url, echo=None):
+            self.events = lab.guard_events if "guard" in url else []
+
+    monkeypatch.setattr(stage, "service", lab.service)
+    staged = []
+    monkeypatch.setattr(stage, "stage_agent", lambda env, model, on_cue: staged.append((model, on_cue)))
+    monkeypatch.setattr(stage, "wait_incident", lab.wait_incident)
+    monkeypatch.setattr(stage, "Listener", Listener)
+    monkeypatch.setattr(stage, "incidents", lambda hmi: [])
+    monkeypatch.setattr(stage, "live", lambda hmi: {"plant": {"tank_level_pct": 50, "chlorine_ppm": 1.4}})
+    monkeypatch.setattr(stage, "file_ticket", lambda form, sc: {"id": 2})
+    monkeypatch.setattr(ops, "http", lambda url, body=None, timeout=5: {})
+    monkeypatch.setattr(stage, "NORMAL_RUN", 0)
+    monkeypatch.setattr(stage, "PAUSE", 0)
+    monkeypatch.setattr(stage, "HOLD", 0)
+
+    assert stage.run("C01", auto=True) == (0 if guard_denies else 1)
+    out = capsys.readouterr().out
+    assert "PHYSICAL INCIDENT: OVERFLOW" in out
+    assert ("DENIED  set_setpoint" in out) == guard_denies
+    # the guard went on only for the second run, and the plant clock was put back to real time
+    resets = [c[2]["defended"] for c in lab.calls if c[:2] == ("mcp-plant", "/reset")]
+    assert resets == [False, True]
+    assert lab.calls[-1] == ("plant-sim", "/speed", {"speed": 1})
+    assert staged == [("replay", True), (None, False)]  # replay on cue for the demo, then the lab's own agent

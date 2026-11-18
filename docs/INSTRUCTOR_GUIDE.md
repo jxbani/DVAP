@@ -16,7 +16,7 @@ The model download is ~4.7 GB; do not leave it to conference Wi-Fi.
    marks FAIL (it prints the fix).
 3. `./dvap up --mode ollama` (downloads the model once; Docker needs 8 GB of memory). On a laptop
    that can't, `./dvap up --mode replay` needs no model and 4 GB.
-4. `./dvap demo`, then open http://127.0.0.1:8090 — the scoreboard should list 11 challenges — and
+4. `./dvap demo --quick`, then open http://127.0.0.1:8090 — the scoreboard should list 11 challenges — and
    http://127.0.0.1:8080, where the HMI should show the plant running.
 
 On CPU a 7B model takes tens of seconds per agent decision; that is fine, the HMI shows every step.

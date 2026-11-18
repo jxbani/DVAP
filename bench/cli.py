@@ -1,7 +1,8 @@
 """`dvap` command line: run the lab, check the machine, and benchmark models.
 
   ./dvap up [--mode replay|ollama|api] [--build]   start the lab (first run: creates .env)
-  ./dvap demo                                      a malicious ticket overdoses the chlorine
+  ./dvap demo [--auto] [--challenge C02] [--live]  staged talk demo: incident, then the guard blocks it
+  ./dvap demo --quick                              the short version: a ticket overdoses the chlorine
   ./dvap doctor                                    can this machine run DVAP? (with fixes)
   ./dvap reset [C01]                               wipe lab state (keeps the model), or one challenge
   ./dvap status | logs [service] | down | version | update
@@ -15,7 +16,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from bench import ops
+from bench import ops, stage
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -33,8 +34,13 @@ def build_parser() -> argparse.ArgumentParser:
     logs = sub.add_parser("logs", help="follow the logs")
     logs.add_argument("service", nargs="?", help="e.g. agent-operator (default: all)")
     sub.add_parser("doctor", help="check Docker, memory, disk, CPU, ports and the LLM mode")
-    demo = sub.add_parser("demo", help="run challenge C02 end to end against the running lab")
-    demo.add_argument("--timeout", type=float, default=180, help="seconds to wait for the agent")
+    demo = sub.add_parser("demo", help="staged talk demo: an attack causes an incident, then the guard blocks it")
+    demo.add_argument("--challenge", choices=["C01", "C02"], default="C01",
+                      help="C01: tank overflow (default); C02: chlorine overdose")
+    demo.add_argument("--auto", action="store_true", help="run every step on fixed timers (under 5 minutes)")
+    demo.add_argument("--live", action="store_true", help="use the lab's configured model, not recorded responses")
+    demo.add_argument("--quick", action="store_true", help="the short version: C02 once, no guard")
+    demo.add_argument("--timeout", type=float, default=180, help="--quick: seconds to wait for the agent")
     sub.add_parser("version", help="DVAP, image, Docker and Compose versions")
     sub.add_parser("update", help="git pull, carry new settings into .env, pull the matching images")
 
@@ -76,7 +82,7 @@ def main(argv=None) -> int:
         "status": ops.status,
         "logs": lambda: ops.logs(args.service),
         "doctor": lambda: 0 if ops.run_doctor(ops.read_env() if ops.ENV.exists() else ops.read_env(ops.ENV_EXAMPLE)) else 1,
-        "demo": lambda: ops.demo(args.timeout),
+        "demo": lambda: ops.demo(args.timeout) if args.quick else stage.run(args.challenge, args.auto, args.live),
         "version": ops.version,
         "update": ops.update,
         "bench": lambda: run_bench(args),

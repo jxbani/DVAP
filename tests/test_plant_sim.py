@@ -165,6 +165,17 @@ def test_api():
     assert r.json()["inflow_pump_on"] is True  # untouched fields keep their value
 
 
+def test_speed_runs_the_plant_clock_faster_until_the_next_reset():
+    import plant_sim.api as plant_api
+
+    assert client.post("/speed", json={"speed": 6}).json() == {"ok": True, "speed": 6}
+    assert plant_api.speed == 6
+    assert client.post("/speed", json={"speed": 11}).status_code == 422  # at most 10x
+    assert client.post("/speed", json={"speed": 0}).status_code == 422
+    client.post("/reset", json={})
+    assert plant_api.speed == 1  # a challenge reset always restores real time
+
+
 def test_api_rejects_bad_actuators():
     assert client.post("/actuators", json={"chlorine_pump_rate": 11}).status_code == 422
     assert client.post("/actuators", json={"tank_level_pct": 0}).status_code == 422

@@ -208,9 +208,10 @@ is still a public default, so anyone could forge flags. Set a private secret; th
 [Instructor guide](INSTRUCTOR_GUIDE.md) explains CTF setup. A `.env` created by `./dvap up` already
 has a random one.
 
-**`./dvap demo` timed out.** It waits up to 3 minutes for the agent's next cycles. In `ollama` mode on
-a slow CPU, give it longer (`./dvap demo --timeout 600`). In `api` mode the model may simply refuse,
-which is a fine result too.
+**`./dvap demo --quick` timed out.** It waits up to 3 minutes for the agent's next cycles. In `ollama`
+mode on a slow CPU, give it longer (`./dvap demo --quick --timeout 600`). In `api` mode the model may
+simply refuse, which is a fine result too. The staged `./dvap demo` uses recorded responses unless
+you pass `--live`, so it doesn't depend on the model.
 
 **Can I make the lab reachable from other machines?** No. Every port is bound to `127.0.0.1` by
 design, because the lab is full of deliberate vulnerabilities. See [Lab safety](LAB_SAFETY.md).

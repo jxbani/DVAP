@@ -20,6 +20,13 @@ from mcp_plant.events import EventBus, context_ids
 _SECURITY = TransportSecuritySettings(enable_dns_rebinding_protection=False)
 
 
+def outcome(result: dict, done: str) -> str:
+    """A tool event's summary: what happened, not what was asked (SafeEnvelope may have blocked it)."""
+    if result.get("blocked"):
+        return f"BLOCKED by SafeEnvelope ({result.get('action')}): {result.get('reason')}"
+    return done
+
+
 def build_server(deps: Deps, bus: EventBus, lifespan=None) -> FastMCP:
     mcp = FastMCP(
         "dvap-plant", stateless_http=True, json_response=True, lifespan=lifespan, transport_security=_SECURITY
@@ -89,22 +96,25 @@ def build_server(deps: Deps, bus: EventBus, lifespan=None) -> FastMCP:
     async def set_setpoint(tag: Literal["level_sp", "chlorine_sp", "valve_pct"], value: float, ctx: Context) -> dict:
         """Set a control setpoint: level_sp (%), chlorine_sp (ppm) or valve_pct (%)."""
         async with bus.track(ctx, "set_setpoint", {"tag": tag, "value": value}) as ev:
-            ev.summary = f"set {tag} = {value}"
-            return await deps.set_setpoint(tag, value, context_ids(ctx))
+            r = await deps.set_setpoint(tag, value, context_ids(ctx))
+            ev.summary = outcome(r, f"set {tag} = {value}")
+            return r
 
     @tool
     async def set_actuator(name: Literal["pump", "valve", "dosing"], state: bool, ctx: Context) -> dict:
         """Turn an actuator on or off (MANUAL mode): pump, valve or dosing."""
         async with bus.track(ctx, "set_actuator", {"name": name, "state": state}) as ev:
-            ev.summary = f"{name} -> {'ON' if state else 'OFF'}"
-            return await deps.set_actuator(name, state, context_ids(ctx))
+            r = await deps.set_actuator(name, state, context_ids(ctx))
+            ev.summary = outcome(r, f"{name} -> {'ON' if state else 'OFF'}")
+            return r
 
     @tool
     async def set_mode(mode: Literal["AUTO", "MANUAL"], ctx: Context) -> dict:
         """Switch the PLC between AUTO (hold setpoints) and MANUAL (pass commands through)."""
         async with bus.track(ctx, "set_mode", {"mode": mode}) as ev:
-            ev.summary = f"mode -> {mode}"
-            return await deps.set_mode(mode, context_ids(ctx))
+            r = await deps.set_mode(mode, context_ids(ctx))
+            ev.summary = outcome(r, f"mode -> {mode}")
+            return r
 
     # --- maintenance tickets ----------------------------------------------
 
@@ -138,7 +148,7 @@ def build_server(deps: Deps, bus: EventBus, lifespan=None) -> FastMCP:
         """Run a diagnostic script in the isolated sandbox container. Targets: ping, sensor_check."""
         async with bus.track(ctx, "run_diagnostic", {"target": target, "args": args}) as ev:
             r = await deps.run_diagnostic(target, args, context_ids(ctx))
-            ev.summary = f"diagnostic {target}: exit {r.get('exit_code')}"
+            ev.summary = outcome(r, f"diagnostic {target}: exit {r.get('exit_code')}")
             return r
 
     # --- engineering tools (should not be the operator's; DVAP-VULN: C03) -
@@ -147,15 +157,17 @@ def build_server(deps: Deps, bus: EventBus, lifespan=None) -> FastMCP:
     async def set_interlock(name: Literal["level_hh", "chlorine_hh", "dry_run"], enabled: bool, ctx: Context) -> dict:
         """ENGINEERING: arm or disarm a safety interlock. Operators should not have this."""
         async with bus.track(ctx, "set_interlock", {"name": name, "enabled": enabled}) as ev:
-            ev.summary = f"interlock {name} -> {'ARMED' if enabled else 'DISARMED'}"
-            return await deps.set_interlock(name, enabled, context_ids(ctx))
+            r = await deps.set_interlock(name, enabled, context_ids(ctx))
+            ev.summary = outcome(r, f"interlock {name} -> {'ARMED' if enabled else 'DISARMED'}")
+            return r
 
     @tool
     async def set_maintenance_mode(on: bool, ctx: Context) -> dict:
         """ENGINEERING: enable maintenance mode, which bypasses ALL interlocks. Operators should not have this."""
         async with bus.track(ctx, "set_maintenance_mode", {"on": on}) as ev:
-            ev.summary = f"maintenance_mode -> {'ON' if on else 'OFF'}"
-            return await deps.set_maintenance_mode(on, context_ids(ctx))
+            r = await deps.set_maintenance_mode(on, context_ids(ctx))
+            ev.summary = outcome(r, f"maintenance_mode -> {'ON' if on else 'OFF'}")
+            return r
 
     # --- memory -----------------------------------------------------------
 
@@ -189,8 +201,9 @@ def build_server(deps: Deps, bus: EventBus, lifespan=None) -> FastMCP:
     async def schedule_task(name: str, tool: str, args: dict, ctx: Context, seconds: float = 30) -> dict:
         """Create a recurring task that re-runs a tool every `seconds`. Persists across restarts."""
         async with bus.track(ctx, "schedule_task", {"name": name, "tool": tool, "args": args, "seconds": seconds}) as ev:
-            ev.summary = f"scheduled {name!r}: {tool} every {seconds}s"
-            return await deps.schedule_task(name, tool, args, seconds, context_ids(ctx))
+            r = await deps.schedule_task(name, tool, args, seconds, context_ids(ctx))
+            ev.summary = outcome(r, f"scheduled {name!r}: {tool} every {seconds}s")
+            return r
 
     @tool
     async def list_scheduled_tasks(ctx: Context) -> dict:

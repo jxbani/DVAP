@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 FILES = [
     "dvap", "dvap.ps1", "docker-compose.yml", "docker-compose.api.yml", ".env.example",
     "gateway/nginx.conf",  # mounted by the gateway service
-    "bench/__init__.py", "bench/__main__.py", "bench/cli.py", "bench/ops.py", "bench/doctor.py",
+    "bench/__init__.py", "bench/__main__.py", "bench/cli.py", "bench/ops.py", "bench/doctor.py", "bench/stage.py",
     "README.md", "LICENSE", "CHANGELOG.md",
 ]
 EXECUTABLE = {"dvap"}

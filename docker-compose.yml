@@ -183,6 +183,7 @@ services:
       MODEL: ${MODEL:-replay} # see DVAP_LLM_MODE in .env.example
       OLLAMA_API_BASE: ${OLLAMA_API_BASE:-http://ollama:11434}
       AGENT_CYCLE_SECONDS: ${AGENT_CYCLE_SECONDS:-30}
+      AGENT_AUTOSTART: ${AGENT_AUTOSTART:-1} # ./dvap demo sets 0: the agent acts only on cue
       # api mode (./dvap up --mode api): a hosted model and its key; docker-compose.api.yml adds the route out.
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
