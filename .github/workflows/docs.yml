@@ -2,12 +2,15 @@ name: Docs
 
 # Builds the MkDocs site from docs/ (strict: a broken link fails the build) on every PR that
 # touches it, and deploys it to GitHub Pages from main. Pages source must be "GitHub Actions".
+# README links are checked against the build on PRs, and against the live site after deploy.
 on:
   push:
     branches: [main]
-    paths: ["docs/**", "mkdocs.yml", "pyproject.toml", "uv.lock", ".github/workflows/docs.yml"]
+    paths: ["docs/**", "mkdocs.yml", "README.md", "scripts/check_links.py", "pyproject.toml", "uv.lock",
+            ".github/workflows/docs.yml"]
   pull_request:
-    paths: ["docs/**", "mkdocs.yml", "pyproject.toml", "uv.lock", ".github/workflows/docs.yml"]
+    paths: ["docs/**", "mkdocs.yml", "README.md", "scripts/check_links.py", "pyproject.toml", "uv.lock",
+            ".github/workflows/docs.yml"]
   workflow_dispatch:
 
 permissions:
@@ -32,6 +35,8 @@ jobs:
       - run: uv run --no-sync mkdocs build --strict --site-dir site
         env:
           NO_MKDOCS_2_WARNING: "1"
+      - name: README links (docs-site links against this build)
+        run: python3 scripts/check_links.py README.md --site site
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site
@@ -50,3 +55,12 @@ jobs:
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            README.md
+            scripts/check_links.py
+          sparse-checkout-cone-mode: false
+      - name: The site is live and every README link resolves
+        run: python3 scripts/check_links.py README.md

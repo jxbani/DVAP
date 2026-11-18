@@ -39,7 +39,7 @@ class Lab:
         self.plant.state = self.plant.state.model_copy(update=values)
 
     def node(self, name: str):
-        return self.opcua.get_node(ua.NodeId(name, self.ns))
+        return self.opcua.get_node(ua.NodeId(name, self.ns))  # type: ignore[arg-type]  # asyncua's hints use its own Int16/String aliases; plain str/int is what it takes
 
     async def read_string(self, name: str) -> str:
         t = TAG[name]

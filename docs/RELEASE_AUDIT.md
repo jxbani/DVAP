@@ -11,6 +11,30 @@
 or diff, and the containment holds. But four blockers must be fixed first — two of them can't be
 undone once the repository is public (see [the prioritised fix list](#prioritised-fix-list)).
 
+## Pre-release check (2026-11-19)
+
+Checked `main` @ `1726e90` (after PR #1) on the same Windows 11 / Docker Desktop host. Fixes are on
+branch `pre-release-check`; no features were added.
+
+| Check | Result |
+|---|---|
+| `ruff check .` | pass |
+| `mypy .` | **fixed**: 4 errors, all in tests (CI's `mypy` skips tests): an asyncua `NodeId` hint, an `Optional` description, an untyped `llm.script`. Now clean |
+| `pytest -q` | pass: 238 passed, 2 skipped (bash-only tests, on Windows) |
+| `./dvap doctor` | correct: in this machine's `ollama` mode it FAILs memory (7.6 GB of 8; WSL's default half-RAM) with the right `.wslconfig` fix; replay mode all PASS |
+| `./dvap up --mode replay` | pass, 109 s, but only through the **build fallback**: ghcr.io refuses the pull (`denied`) because no release has published images yet. A release-zip user has no fallback, so the first release must publish the images and make them public |
+| C02 (`./dvap demo`) | pass: agent obeyed in 21 s and the scoreboard marked it solved. **Slow**: the CHLORINE_OVERDOSE incident itself appears ~7.5 min later (setpoint 9 ppm, dosing from 1.4 ppm). The demo now says so |
+| C01 (ticket → overflow) | pass: OVERFLOW on the HMI and C01 solved after 273 s |
+| `./dvap down` | pass, 7 s |
+| Workflows on `main` | CI, CodeQL, Scorecard: pass. **Docs: fail**: the build passes, but deploy fails because GitHub Pages is not enabled (repository setting, not code). Release, Fresh install, Weekly solvers: never run yet |
+| Dependabot PRs | #2 nginx, #3 actions, #4 python minor/patch: CI green. **#5 `mcp` 1.30 → 2.3: CI fails**: a major release that moves `FastMCP`, renames `streamablehttp_client` and drops `create_connected_server_and_client_session`. `main` is locked to 1.30 and unaffected; migrating is post-release work, not a pre-release fix |
+| Docs site https://jxbani.github.io/DVAP/ | **not live (404)**: same cause as the Docs failure |
+| README links | new `scripts/check_links.py`: all 34 resolve against the docs build; live, the 20 docs-site links 404 until Pages is on. Added to the Docs workflow (against the build on PRs, live after each deploy) |
+
+**Before tagging:** enable Pages (Settings → Pages → Source: GitHub Actions) and rerun Docs; rename
+`[Unreleased]` in CHANGELOG.md; after the release, make the ghcr.io packages public and watch the
+Fresh install workflow; decide on #5 (close, or pin `mcp<2` in Dependabot until a migration).
+
 ## Fix status (updated 2026-11-18)
 
 Every blocker and "should" item is resolved: 11 fixed, and blocker 2 accepted as the owner's

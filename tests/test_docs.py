@@ -3,6 +3,7 @@
 import re
 from pathlib import Path
 
+import scripts.check_links as linkcheck
 import scripts.gen_docs as gen
 
 README = Path("README.md").read_text(encoding="utf-8")
@@ -53,3 +54,14 @@ def test_site_includes_resolve():
         assert all(link.startswith(("https://", "#", "mailto:")) for link in links), (name, links)
     cfg = Path("mkdocs.yml").read_text(encoding="utf-8")
     assert "pymdownx.snippets" in cfg
+
+
+def test_link_checker_resolves_local_files_and_docs_pages_without_network(tmp_path):
+    site = tmp_path / "site"
+    (site / "challenges" / "C01").mkdir(parents=True)
+    (site / "challenges" / "C01" / "index.html").write_text("")
+    (tmp_path / "LICENSE").write_text("")
+    md = tmp_path / "README.md"
+    md.write_text(f"[a](LICENSE) [b]({linkcheck.DOCS_URL}challenges/C01/) [c]({linkcheck.DOCS_URL}nope/) "
+                  "[d](missing.md#x) [e](http://127.0.0.1:8080)")
+    assert linkcheck.check(md, site) == [f"{linkcheck.DOCS_URL}nope/", "missing.md#x"]
