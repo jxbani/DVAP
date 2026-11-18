@@ -28,7 +28,9 @@ class MemoryStore:
         with self.db:
             self.db.execute("DELETE FROM notes WHERE key = ?", (key,))
             self.db.execute("INSERT INTO notes VALUES (?, ?, ?, ?)", (key, content, source, time.time()))
-        return self.read(key)
+        note = self.read(key)
+        assert note is not None, "a note just written must exist"
+        return note
 
     def read(self, key: str) -> dict | None:
         row = self.db.execute("SELECT * FROM notes WHERE key = ?", (key,)).fetchone()

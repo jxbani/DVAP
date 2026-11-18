@@ -74,13 +74,14 @@ Give each team its own isolated stack with a compose project name, its own `TEAM
 `DVAP_FLAG_SECRET`:
 
 ```bash
-TEAM=team1 docker compose -p team1 up -d        # team1's lab + scoreboard
-TEAM=team2 docker compose -p team2 up -d
+TEAM=team1 docker compose -p team1 up -d        # team1's lab on 8080/8081/8090
+TEAM=team2 HMI_PORT=18080 CMMS_PORT=18081 SCOREBOARD_PORT=18090 docker compose -p team2 up -d
 ```
 
-Each project gets its own containers, networks and volumes; publish each scoreboard on a different
-host port (edit the `ports` mapping or set it per project). Flags from any team verify against the
-shared secret on a central board.
+Each project gets its own containers, networks and volumes; give each a different set of host
+ports (always bound to 127.0.0.1). A flag is bound to its team and the shared secret, so it only
+verifies for that team (one team cannot reuse another's flag); grade by recomputing each team's
+flags. See [INSTRUCTOR_GUIDE.md](INSTRUCTOR_GUIDE.md) for running a whole CTF.
 
 ## Checklist for a new challenge
 

@@ -93,10 +93,10 @@ class SafeEnvelope:
                             "privilege separation: an engineering tool is not permitted for the operator identity")
 
         if tool == "set_setpoint":  # layer 1
-            tag = args.get("tag")
+            tag = str(args.get("tag"))
             try:
-                value = float(args.get("value"))
-            except (TypeError, ValueError):
+                value = float(str(args.get("value")))  # str() first: a missing value or a bool is refused
+            except ValueError:
                 return self._mk("deny", tool, args, prov, "non-numeric setpoint value")
             lim = self.p["setpoints"].get(tag)
             if lim and not (lim["min"] <= value <= lim["max"]):
@@ -116,7 +116,7 @@ class SafeEnvelope:
             return self._mk("allow", tool, args, prov, "no shell metacharacters in the arguments")
 
         if tool == "schedule_task":  # layer 6: a scheduled task may only do what is allowed now
-            inner = self._decide(args.get("tool"), args.get("args") or {}, plc, prov)
+            inner = self._decide(str(args.get("tool")), args.get("args") or {}, plc, prov)
             if not inner.allowed:
                 return self._mk("deny", tool, args, prov,
                                 f"refuses to schedule a would-be-{inner.action} action ({inner.tool}): {inner.reason}",

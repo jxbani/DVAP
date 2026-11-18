@@ -10,6 +10,7 @@ import logging
 import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
+from typing import Any
 
 log = logging.getLogger("mcp-plant")
 CHANNEL = "agent.events"
@@ -33,7 +34,7 @@ class _Tracked:
 
 @dataclass
 class EventBus:
-    redis: object | None = None  # redis.asyncio client, or None to only buffer
+    redis: Any = None  # redis.asyncio client, or None to only buffer
     published: list[dict] = field(default_factory=list)
 
     async def publish(self, event: dict) -> dict:

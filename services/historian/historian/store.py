@@ -1,6 +1,7 @@
 """SQLite storage for the historian: numeric samples and discrete events."""
 
 import sqlite3
+from collections.abc import Sequence
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS samples (ts REAL NOT NULL, tag TEXT NOT NULL, value REAL NOT NULL);
@@ -18,7 +19,7 @@ class Store:
         self.db = sqlite3.connect(path, check_same_thread=False)
         self.db.executescript(SCHEMA)
 
-    def record(self, ts: float, values: dict[str, float], events: list[tuple[str, str, str]] = ()) -> None:
+    def record(self, ts: float, values: dict[str, float], events: Sequence[tuple[str, str, str]] = ()) -> None:
         """Store one poll: numeric tag values plus any (kind, name, message) events."""
         with self.db:
             self.db.executemany("INSERT INTO samples VALUES (?, ?, ?)", [(ts, k, v) for k, v in values.items()])

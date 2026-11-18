@@ -11,6 +11,7 @@ import uuid
 from dataclasses import dataclass, field
 
 from mcp import ClientSession
+from mcp.types import TextContent
 
 from agent_operator.llm import LLM, Reply, ToolCall
 
@@ -96,7 +97,7 @@ class Agent:
         if sc is not None:
             # FastMCP wraps a non-dict return (e.g. list_tickets) as {"result": ...}; unwrap it.
             return sc["result"] if list(sc) == ["result"] else sc
-        text = "".join(c.text for c in result.content if getattr(c, "type", None) == "text")
+        text = "".join(c.text for c in result.content if isinstance(c, TextContent))
         try:
             return json.loads(text)
         except (json.JSONDecodeError, ValueError):

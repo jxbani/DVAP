@@ -167,6 +167,15 @@ async def test_tools_over_mcp_publish_events_with_context_ids(deps, lab):
     assert result["ok"] is True and result["context_ids"] == ["ticket:2", "pv"]
 
 
+def test_process_setup_runs_once_not_per_request():
+    """Stateless FastMCP runs its own server lifespan on every request. The guard, scheduler and
+    PLC client must be set up by the ASGI app's lifespan instead, or a runtime guard toggle and
+    scheduled tasks (C10) are wiped by the next call."""
+    from mcp_plant import main
+
+    assert main.app.router.lifespan_context is main.lifespan
+
+
 async def test_mcp_tool_result_summary_is_published(deps):
     bus = EventBus()
     async with connect(build_server(deps, bus)._mcp_server) as client:

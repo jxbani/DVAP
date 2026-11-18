@@ -39,7 +39,9 @@ bus = EventBus()
 
 
 @contextlib.asynccontextmanager
-async def lifespan(_server):
+async def lifespan(app):
+    """Process-wide setup, run ONCE by the ASGI app. Not FastMCP's server lifespan: in stateless
+    mode that one runs per request, which would rebuild the guard and scheduler on every call."""
     modbus = AsyncModbusTcpClient(PLC_HOST, port=PLC_PORT)
     await modbus.connect()
     bus_client = redis.from_url(REDIS_URL)
@@ -62,7 +64,8 @@ async def lifespan(_server):
         deps.guard = deps.guard_impl if DEFENDED else None
         task = asyncio.create_task(deps.scheduler.run())
         try:
-            yield
+            async with mcp_lifespan(app):  # FastMCP's session manager
+                yield
         finally:
             task.cancel()
             modbus.close()
@@ -70,5 +73,7 @@ async def lifespan(_server):
 
 
 # The lifespan fills in the clients; build_server captures the Deps/EventBus instances.
-mcp = build_server(deps, bus, lifespan=lifespan)
+mcp = build_server(deps, bus)
 app = mcp.streamable_http_app()
+mcp_lifespan = app.router.lifespan_context
+app.router.lifespan_context = lifespan

@@ -91,7 +91,8 @@ class Plc:
         self.nodes = {}
         for tag in TAGS:
             node = await folder.add_variable(
-                ua.NodeId(tag.name, ns), tag.name, self._opcua_seen[tag.name], _variant_type(tag)
+                # asyncua's annotations want its own wrapper types; plain str/int are accepted at runtime.
+                ua.NodeId(tag.name, ns), tag.name, self._opcua_seen[tag.name], _variant_type(tag)  # type: ignore[arg-type]
             )
             if tag.writable:
                 await node.set_writable()

@@ -4,6 +4,7 @@ memory. Kept free of MCP and eventing so it can be tested directly."""
 import json
 import time
 from dataclasses import dataclass
+from typing import Any
 
 import httpx
 from pymodbus.client import AsyncModbusTcpClient
@@ -11,6 +12,7 @@ from pymodbus.client import AsyncModbusTcpClient
 from dvap_common.memory import MemoryStore
 from dvap_common.plc_client import read_all, write_tag
 from dvap_common.plc_tags import INCIDENT_BITS, INTERLOCKS, STATUS_BITS, bitfield, flags
+from mcp_plant.safeenvelope import SafeEnvelope
 from mcp_plant.scheduler import Scheduler
 
 WORK_ORDERS_KEY = "work.orders"
@@ -29,10 +31,10 @@ class Deps:
     historian: httpx.AsyncClient
     sandbox: httpx.AsyncClient
     memory: MemoryStore
-    redis: object | None = None  # redis.asyncio client, for the inter-agent bus (C07)
+    redis: Any = None  # redis.asyncio client (or a test double), for the inter-agent bus (C07)
     scheduler: Scheduler | None = None  # recurring tasks (C10)
-    guard: object | None = None  # active SafeEnvelope, or None when the lab is undefended (default)
-    guard_impl: object | None = None  # the SafeEnvelope instance, so /reset can toggle `guard` on/off
+    guard: SafeEnvelope | None = None  # active guard, or None when the lab is undefended (default)
+    guard_impl: SafeEnvelope | None = None  # the guard instance, so /reset can toggle `guard` on/off
 
     async def _guard(self, tool: str, args: dict, context_ids=()) -> dict | None:
         """Ask SafeEnvelope before a write reaches the PLC. Returns a blocked-result dict to

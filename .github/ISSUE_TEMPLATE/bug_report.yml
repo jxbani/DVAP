@@ -1,0 +1,57 @@
+name: Bug report
+description: Something in the lab, a challenge or the tooling doesn't work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The vulnerabilities in docs/VULNERABILITIES.md are deliberate and not bugs. A way to escape the
+        lab (reach the host or the internet) is a security report — use the Security tab, not this form.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - A challenge (can't be solved, or the checker doesn't fire)
+        - SafeEnvelope
+        - Benchmark (dvap bench)
+        - HMI / scoreboard / ticket form
+        - Setup (make up, make model, Docker)
+        - Tests / CI
+        - Docs
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: challenge
+    attributes:
+      label: Challenge ID (if any)
+      placeholder: C03
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. make reset CH=C03
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Commit hash, OS, Docker version, and the model (MODEL / OLLAMA_MODEL) if the agent is involved.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: e.g. `docker compose logs agent-operator mcp-plant --tail 100`
+      render: text

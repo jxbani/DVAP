@@ -55,7 +55,7 @@ services:
       CMMS_DB: /data/cmms.sqlite
     volumes: [cmms-data:/data]
     networks: [plant, edge] # `edge` only so the ticket form can be published
-    ports: ["127.0.0.1:8081:8000"] # loopback only, never 0.0.0.0
+    ports: ["127.0.0.1:${CMMS_PORT:-8081}:8000"] # loopback only, never 0.0.0.0 (the IP is not configurable)
     healthcheck: *healthcheck
 
   hmi:
@@ -69,7 +69,7 @@ services:
       bus: { condition: service_healthy }
     # `plant` to reach the lab, `edge` only so the port below can be published.
     networks: [plant, edge]
-    ports: ["127.0.0.1:8080:8000"] # loopback only, never 0.0.0.0
+    ports: ["127.0.0.1:${HMI_PORT:-8080}:8000"] # loopback only, never 0.0.0.0 (the IP is not configurable)
     healthcheck: *healthcheck
 
   # Challenge engine, reset, flags and scoring UI. Reads challenges/ (bind-mounted so authors
@@ -91,7 +91,7 @@ services:
     depends_on:
       bus: { condition: service_healthy }
     networks: [plant, edge] # `edge` only so the UI port can be published
-    ports: ["127.0.0.1:8090:8000"] # loopback only, never 0.0.0.0
+    ports: ["127.0.0.1:${SCOREBOARD_PORT:-8090}:8000"] # loopback only, never 0.0.0.0 (the IP is not configurable)
     healthcheck: *healthcheck
 
   # Diagnostic sandbox. The blast radius for run_diagnostic command injection (C05).
@@ -100,6 +100,14 @@ services:
   sandbox:
     build: { context: ., args: { SERVICE: sandbox, PACKAGE: sandbox } }
     networks: [plant]
+    # Hardened: it runs attacker-controlled shell commands (C05). See docs/LAB_SAFETY.md.
+    user: "65534:65534" # nobody
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 256m
     healthcheck: *healthcheck
 
   # Third-party MCP server for demand forecasting (DVAP-VULN: C04). Its tool description is a
@@ -168,13 +176,14 @@ services:
     networks: [plant]
     healthcheck: *healthcheck
 
-  # Local LLM. Pull the model once: docker compose exec ollama ollama pull qwen2.5:7b-instruct
-  # On `edge` as well as `plant` because pulling a model needs internet; runs on CPU unless a
+  # Local LLM, on the internal network only: it must not be a bridge to the internet, because a
+  # shell inside the lab (C05) could otherwise use its pull API to reach arbitrary hosts. Models
+  # are fetched by the one-shot `ollama-pull` service below (`make model`). Runs on CPU unless a
   # GPU is wired in (uncomment the deploy block). The agent then runs fully offline.
   ollama:
     image: ollama/ollama:latest
     volumes: [ollama-models:/root/.ollama]
-    networks: [plant, edge]
+    networks: [plant]
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 10s
@@ -184,6 +193,16 @@ services:
     #   resources:
     #     reservations:
     #       devices: [{ driver: nvidia, count: all, capabilities: [gpu] }]
+
+  # One-shot model download, the only container with internet access, and only while it runs.
+  # It writes into the same volume the internal `ollama` reads. Not started by `make up`.
+  ollama-pull:
+    image: ollama/ollama:latest
+    profiles: [setup]
+    volumes: [ollama-models:/root/.ollama]
+    networks: [edge]
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["ollama serve & until ollama list >/dev/null 2>&1; do sleep 1; done; ollama pull ${OLLAMA_MODEL:-qwen2.5:7b-instruct}"]
 
 networks:
   plant:

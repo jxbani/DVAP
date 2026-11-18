@@ -5,7 +5,6 @@ scripted replies so tests never need a real model.
 """
 
 import json
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Protocol
 
@@ -21,6 +20,7 @@ class ToolCall:
 class Reply:
     content: str = ""
     tool_calls: list[ToolCall] = field(default_factory=list)
+    usage: dict | None = None  # {prompt_tokens, completion_tokens, total_tokens} when the provider reports it
 
 
 class LLM(Protocol):
@@ -44,7 +44,10 @@ class LiteLLMClient:
             raw = tc.function.arguments
             args = raw if isinstance(raw, dict) else json.loads(raw or "{}")
             calls.append(ToolCall(id=tc.id, name=tc.function.name, arguments=args))
-        return Reply(content=msg.content or "", tool_calls=calls)
+        usage = getattr(resp, "usage", None)
+        if usage is not None and hasattr(usage, "model_dump"):
+            usage = usage.model_dump()
+        return Reply(content=msg.content or "", tool_calls=calls, usage=usage)
 
 
 class FakeLLM:
@@ -59,4 +62,4 @@ class FakeLLM:
         if not self.script:
             return Reply(content="(no more scripted replies)")
         step = self.script.pop(0)
-        return step(messages) if isinstance(step, Callable) else step
+        return step(messages) if callable(step) else step

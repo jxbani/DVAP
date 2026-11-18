@@ -49,6 +49,10 @@ Each decision is one of **allow**, **deny** (refused) or **review** (not applied
   caught by a policy rule instead (stopping the dosing pump needs approval), not by the forecast.
 - The "in N s" in a forecast reason is the 10 s scan bucket in which the incident first appears,
   not an exact crossing time.
+- At a normal tank level the C07/C08 drain-shut/pump maneuver is not unsafe within the 120 s
+  horizon, so the forecast allows it; those spoofed-input attacks are the case for the
+  provenance/taint control (untrusted work order / forged sensor), not the forecast. The
+  benchmark (`dvap bench --guard on`) reports this honestly.
 
 See [VULNERABILITIES.md](VULNERABILITIES.md#the-defence-safeenvelope) for which layer blocks each
 challenge, and `tests/test_safeenvelope.py` for the defended attack of every challenge plus the

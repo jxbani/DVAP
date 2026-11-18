@@ -2,8 +2,8 @@
 each challenge's success condition, and mints/verifies flags. Published on 127.0.0.1:8090.
 
 Classroom/CTF mode: run one isolated stack per team with a compose project name
-(`docker compose -p team1 ...`), each with its own TEAM and the same DVAP_FLAG_SECRET, so a
-flag captured on one stack verifies on a central board. See docs/CHALLENGE_AUTHORING.md.
+(`docker compose -p team1 ...`), each with its own TEAM and the same DVAP_FLAG_SECRET. A flag is
+bound to (secret, team), so it verifies only for its own team. See docs/INSTRUCTOR_GUIDE.md.
 """
 
 import asyncio

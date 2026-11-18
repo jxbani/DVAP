@@ -41,7 +41,9 @@ class TicketStore:
                 f"INSERT INTO tickets ({', '.join(columns)}) VALUES ({', '.join('?' * len(columns))})",
                 [*fields.values(), now, now],
             )
-        return self.get(cur.lastrowid)
+        ticket = self.get(cur.lastrowid) if cur.lastrowid else None
+        assert ticket is not None, "a ticket just inserted must exist"
+        return ticket
 
     def get(self, ticket_id: int) -> dict | None:
         row = self.db.execute("SELECT * FROM tickets WHERE id = ?", (ticket_id,)).fetchone()

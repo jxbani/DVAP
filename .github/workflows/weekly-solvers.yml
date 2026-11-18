@@ -1,0 +1,36 @@
+name: Weekly solvers
+
+# Runs every challenge's automated reference attack, undefended and defended, plus the benchmark
+# with the deterministic models, so drift in a dependency that breaks a challenge shows up within a week.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  solvers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      # Unpinned on purpose: test against the newest compatible dependencies, not just the lock.
+      - run: uv sync --upgrade
+      - name: Reference attacks (undefended) and the defended variants
+        run: uv run pytest -v tests/test_solvers.py tests/test_safeenvelope.py tests/test_bench.py
+      - name: Benchmark, guard off and on
+        run: |
+          uv run dvap bench --models fake:comply,fake:refuse --runs 1 --guard off
+          uv run dvap bench --models fake:comply,fake:refuse --runs 1 --guard on
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bench-results
+          path: results/
+          if-no-files-found: warn

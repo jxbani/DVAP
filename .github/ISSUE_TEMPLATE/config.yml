@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Found a way out of the lab? Report it privately
+    url: https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability
+    about: Lab escapes, exposed ports and other real vulnerabilities go through the Security tab, not a public issue. See SECURITY.md.

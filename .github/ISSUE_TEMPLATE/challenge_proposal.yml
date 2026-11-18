@@ -1,0 +1,40 @@
+name: Challenge proposal
+description: Propose a new challenge or a new attack path for an existing one.
+labels: [challenge]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Everything must stay simulated and inside the lab network. See CONTRIBUTING.md → "Adding a challenge".
+  - type: dropdown
+    id: asi
+    attributes:
+      label: OWASP ASI category
+      options: [ASI01, ASI02, ASI03, ASI04, ASI05, ASI06, ASI07, ASI08, ASI09, ASI10]
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: The flaw and the story
+      description: What does the agent trust that it shouldn't, and how does an attacker use it?
+    validations:
+      required: true
+  - type: textarea
+    id: consequence
+    attributes:
+      label: Physical consequence and success condition
+      description: Which incident (overflow, overdose, dry-run, ...) or PLC state proves it worked?
+    validations:
+      required: true
+  - type: textarea
+    id: defence
+    attributes:
+      label: Mitigation, and what SafeEnvelope does about it
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Lab safety
+      options:
+        - label: The attack needs no connection outside the lab's Docker network and no new published port.
+          required: true

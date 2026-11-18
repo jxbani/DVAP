@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use DVAP in teaching or research, please cite it as below."
+title: "DVAP: Damn Vulnerable Agentic Plant"
+abstract: >-
+  An intentionally vulnerable, fully simulated water-treatment plant operated by an LLM agent
+  through MCP tools, for teaching and benchmarking the OWASP Top 10 for Agentic Applications
+  (ASI01-ASI10) with physical consequences, plus a deterministic policy guard (SafeEnvelope)
+  and a model benchmark harness.
+type: software
+authors:
+  - name: "The DVAP Authors"
+version: 0.1.0
+date-released: 2026-11-18
+license: Apache-2.0
+keywords:
+  - agentic AI security
+  - OWASP
+  - LLM agents
+  - Model Context Protocol
+  - industrial control systems
+  - prompt injection
+  - capture the flag
+  - security education

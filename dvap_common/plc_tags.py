@@ -3,6 +3,7 @@
 docs/REGISTER_MAP.md is the human-readable version of this file.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 STRING_CHARS = 64  # 2 ASCII chars per 16-bit register -> 32 registers per string
@@ -33,7 +34,7 @@ class Tag:
             return [raw[i] << 8 | raw[i + 1] for i in range(0, self.chars, 2)]
         return [min(max(round(value * (self.scale or 1)), 0), 0xFFFF)]
 
-    def decode(self, raw: list):
+    def decode(self, raw: Sequence):
         if self.table == "coil":
             return bool(raw[0])
         if self.chars:
