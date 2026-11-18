@@ -40,10 +40,18 @@ jobs:
       - run: uv run pytest -q
 
   compose:
-    name: docker compose build
+    name: docker compose build + smoke test
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - run: docker compose config --quiet
       - run: docker compose build
+      # The lab without the model and the agent (neither is needed for these checks): the gateway
+      # pulls in the UIs, and mcp-plant pulls in the PLC, plant, sandbox, bus and the rest.
+      - run: docker compose up -d --wait gateway mcp-plant
+      - run: python3 scripts/smoke_test.py
+      - if: failure()
+        run: docker compose logs --tail 100
+      - if: always()
+        run: docker compose down -v
