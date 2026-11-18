@@ -23,12 +23,17 @@ test:
 bench:
 	uv run dvap bench $(or $(ARGS),--models fake:comply,fake:refuse --runs 1 --guard off)
 
-# `make reset` wipes the whole lab (volumes included) and rebuilds.
+# `make reset` wipes the lab's state (tickets, history, agent memory) and rebuilds. It keeps the
+# downloaded model: `down -v` would delete every volume, including the 4.7 GB `ollama-models`.
+# The list below is an explicit allowlist, so a reset never removes a volume it doesn't know.
 # `make reset CH=C01` resets only the lab state for one challenge, in place and fast,
 # by asking the scoreboard (which resets every service and clears the bus).
+LAB_STATE_VOLUMES = historian-data cmms-data memory-data
 reset:
 ifndef CH
-	docker compose down -v
+	docker compose down
+	@project=$$(docker compose config | sed -n 's/^name: //p'); \
+	for v in $(LAB_STATE_VOLUMES); do docker volume rm -f "$${project}_$$v"; done
 	docker compose up -d --build
 else
 	curl -fsS -X POST http://127.0.0.1:8090/api/challenges/$(CH)/reset && echo " reset $(CH)"

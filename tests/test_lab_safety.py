@@ -53,6 +53,16 @@ def test_sandbox_is_hardened():
     assert sb.get("pids_limit") and sb.get("mem_limit")
 
 
+def test_make_reset_keeps_the_downloaded_model():
+    """`down -v` would delete the 4.7 GB model volume; reset removes an explicit allowlist instead,
+    which must cover every other named volume (or a new one would silently survive resets)."""
+    lines = Path("Makefile").read_text(encoding="utf-8").splitlines()
+    recipes = [line for line in lines if line.startswith("\t")]  # commands, not comments
+    assert not any("down -v" in r or "down --volumes" in r for r in recipes)
+    allowlist = next(line for line in lines if line.startswith("LAB_STATE_VOLUMES"))
+    assert set(allowlist.split("=", 1)[1].split()) == set(COMPOSE["volumes"]) - {"ollama-models"}
+
+
 def test_litellm_never_fetches_catalogs_on_its_own():
     """The agent must not reach outside the lab (CLAUDE.md hard rule): LiteLLM's self-initiated
     downloads are disabled before it can be imported."""
