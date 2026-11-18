@@ -94,6 +94,17 @@ def test_images_are_pinned():
             assert "@sha256:" in image, f"{name} third-party image is not pinned by digest"
 
 
+def test_github_actions_are_pinned_to_commits():
+    """A moved tag can't change what CI runs: every action by full commit SHA, uv by version."""
+    for wf in Path(".github/workflows").glob("*.yml"):
+        for job in yaml.safe_load(wf.read_text(encoding="utf-8"))["jobs"].values():
+            for step in job["steps"]:
+                if "uses" in step:
+                    assert re.fullmatch(r"[\w./-]+@[0-9a-f]{40}", step["uses"]), f"{wf.name}: {step['uses']}"
+                    if "setup-uv" in step["uses"]:
+                        assert step.get("with", {}).get("version"), f"{wf.name}: setup-uv without a uv version"
+
+
 def test_make_reset_keeps_the_downloaded_model():
     """`down -v` would delete the 4.7 GB model volume; reset removes an explicit allowlist instead,
     which must cover every other named volume (or a new one would silently survive resets)."""

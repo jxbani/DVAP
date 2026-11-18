@@ -16,10 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           python-version: "3.12"
+          version: "0.13.5" # uv itself, pinned
       # Unpinned on purpose: test against the newest compatible dependencies, not just the lock.
       - run: uv sync --upgrade
       - name: Reference attacks (undefended) and the defended variants
@@ -28,7 +29,7 @@ jobs:
         run: |
           uv run dvap bench --models fake:comply,fake:refuse --runs 1 --guard off
           uv run dvap bench --models fake:comply,fake:refuse --runs 1 --guard on
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: bench-results

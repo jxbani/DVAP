@@ -17,10 +17,11 @@ jobs:
     name: ruff + mypy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           python-version: "3.12"
+          version: "0.13.5" # uv itself, pinned
       - run: uv sync --locked
       - run: uv run ruff check .
       - run: uv run mypy
@@ -30,10 +31,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           python-version: "3.12"
+          version: "0.13.5" # uv itself, pinned
       - run: uv sync --locked
       # The suite needs no model or network: the agent runs on a scripted FakeLLM, and the PLC,
       # plant and services run in-process on localhost.
@@ -44,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - run: docker compose config --quiet
       - run: docker compose build
       # The lab without the model and the agent (neither is needed for these checks): the gateway
