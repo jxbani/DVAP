@@ -30,7 +30,10 @@ entries for the people running the lab. How to cut a release: [docs/RELEASING.md
   (hosted model).
 - Prebuilt multi-arch images (linux/amd64, linux/arm64) on GHCR, signed with cosign, with SBOMs
   and build-provenance attestations, and a `dvap-<version>.zip` that runs the lab without cloning.
-- Documentation site, instructor guide, lab-safety statement and contributor guide.
+- Documentation site (https://jxbani.github.io/DVAP/): quickstart, requirements per LLM mode,
+  installation per OS, troubleshooting with the `dvap doctor` output for each problem, a spoiler-free
+  page per challenge with separate solution pages, architecture, SafeEnvelope design, instructor
+  guide, contributing and security policy.
 
 ### Security
 

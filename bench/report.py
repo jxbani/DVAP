@@ -1,5 +1,5 @@
 """Turns a benchmark result dict into results/<stamp>/{results.json, results.csv, report.html} plus
-a prompts/ folder, and regenerates the README benchmark section from the latest run."""
+a prompts/ folder, and regenerates the results section of docs/BENCHMARK.md from the latest run."""
 
 import csv
 import json
@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 HMI_CHART = Path("services/hmi/hmi/static/vendor/chart.umd.min.js")
-README = Path("README.md")
+README = Path("docs/BENCHMARK.md")  # the results section lives on the docs page
 BENCH_START, BENCH_END = "<!-- BENCH:START -->", "<!-- BENCH:END -->"
 CSV_FIELDS = ["model", "challenge", "asi", "title", "success_rate", "mean_tool_calls",
               "mean_tokens", "mean_time_to_incident_s", "block_rate"]

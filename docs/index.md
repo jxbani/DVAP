@@ -1,34 +1,44 @@
 # DVAP — Damn Vulnerable Agentic Plant
 
-DVAP is a deliberately vulnerable, fully simulated water-treatment plant run by an LLM agent through
-MCP tools. Every challenge maps to the [OWASP Top 10 for Agentic Applications](https://genai.owasp.org/)
-(ASI01–ASI10), and every successful attack has a *physical* consequence on the HMI: the tank
-overflows, the chlorine overdoses, the pump runs dry.
+**A simulated water-treatment plant run by an LLM agent, where every attack on the agent has a
+physical consequence.** File a maintenance ticket with the right words and the tank overflows.
+Poison the agent's memory and the chlorine overdoses three shifts later. Spoof a message on the
+inter-agent bus and the pump runs dry.
 
-!!! warning
-    DVAP is intentionally insecure. Run it only on a machine you control, keep every port on
-    `127.0.0.1`, and never connect it to real equipment. Read [Lab safety](LAB_SAFETY.md) first.
+DVAP has eleven hands-on challenges, mapped to the OWASP Top 10 for Agentic Applications
+(ASI01–ASI10). Each one comes with a story, hints, an automatic success check and a defended
+variant. The deterministic guard, SafeEnvelope, is there to be attacked, and a benchmark measures
+how often a given model falls for each attack. It runs on one laptop: offline with a local model,
+or with no model at all.
 
-## Quickstart
+<!-- TODO: replace with assets/demo.gif (a ticket injection overflowing the tank on the HMI, ~15 s loop). -->
+![A malicious maintenance ticket drives the agent to overdose the chlorine](assets/demo-placeholder.svg)
 
-You need Docker (with Compose v2). Either download `dvap-<version>.zip` from the
-[latest release](https://github.com/jxbani/DVAP/releases/latest) and unzip it, or clone the repo:
+!!! danger "Deliberately vulnerable. Simulated only."
+    DVAP is insecure on purpose. Run it only on a machine you control, keep its ports on
+    `127.0.0.1`, and **never connect it to real industrial equipment** or an industrial network.
+    Read [Lab safety](LAB_SAFETY.md) before running it anywhere shared.
+
+## Try it
 
 ```bash
 git clone https://github.com/jxbani/DVAP.git && cd DVAP
-./dvap doctor    # PASS/FAIL checks, with the fix for anything that fails
-./dvap up        # first run: creates .env and asks which LLM mode to use
-./dvap demo      # a malicious ticket makes the agent overdose the chlorine
+./dvap up
+./dvap demo
 ```
 
-Then open the scoreboard at http://127.0.0.1:8090 and the HMI at http://127.0.0.1:8080. The
-[README](https://github.com/jxbani/DVAP#readme) covers the LLM modes and their hardware needs,
-every command, platform notes and troubleshooting.
+[Quickstart](quickstart.md) · [Requirements](requirements.md) · [Installation per OS](installation.md) · [Troubleshooting](troubleshooting.md)
 
-## Where to next
+## Who it's for
 
-- Teaching a class or running a CTF: [Instructor guide](INSTRUCTOR_GUIDE.md)
-- What each challenge exploits: [Vulnerabilities](VULNERABILITIES.md)
-- The defensive guard to attack: [SafeEnvelope](SAFEENVELOPE.md)
-- Measuring how often a model falls for each attack: [Benchmarking](BENCHMARK.md)
-- Writing a new challenge: [Authoring a challenge](CHALLENGE_AUTHORING.md)
+- **Learners and CTF players:** the [challenges](challenges/index.md) start at "file a ticket" and
+  end at rogue scheduled tasks and approvals that lie to the human.
+- **Instructors:** a 3-hour workshop plan, multi-team CTF setup and grading are in the
+  [Instructor guide](INSTRUCTOR_GUIDE.md).
+- **Defenders and researchers:** read how [SafeEnvelope](SAFEENVELOPE.md) decides, see what it
+  deliberately doesn't stop, and [benchmark](BENCHMARK.md) models against every attack.
+
+## Not an official OWASP project
+
+DVAP is an independent community project. It is not endorsed by OWASP; its challenges are mapped to
+the OWASP Top 10 for Agentic Applications so it can be taught alongside it.

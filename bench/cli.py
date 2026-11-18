@@ -63,7 +63,7 @@ def run_bench(args) -> int:
     challenges = [c.strip() for c in args.challenges.split(",")] if args.challenges else None
     data = asyncio.run(run_matrix(models, args.runs, args.guard == "on", challenges))
     out = write_run(data, now_stamp(), args.out)
-    print(f"wrote {out}/results.json, results.csv, report.html and updated README.md")
+    print(f"wrote {out}/results.json, results.csv, report.html and updated docs/BENCHMARK.md")
     return 0
 
 

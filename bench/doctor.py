@@ -205,5 +205,11 @@ def report(checks: list[Check]) -> str:
             lines.append(f"{'':4}  {'':<{width}}  fix: {c.fix}")
     failed = sum(c.status == "FAIL" for c in checks)
     lines.append("")
-    lines.append(f"{failed} check(s) failed." if failed else "All checks passed. Next: ./dvap up")
+    warned = sum(c.status == "WARN" for c in checks)
+    if failed:
+        lines.append(f"{failed} check(s) failed.")
+    elif warned:
+        lines.append(f"No failures ({warned} warning(s): see above). Next: ./dvap up")
+    else:
+        lines.append("All checks passed. Next: ./dvap up")
     return "\n".join(lines)
