@@ -21,7 +21,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
-      - run: uv sync --frozen
+      - run: uv sync --locked
       - run: uv run ruff check .
       - run: uv run mypy
 
@@ -34,7 +34,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
-      - run: uv sync --frozen
+      - run: uv sync --locked
       # The suite needs no model or network: the agent runs on a scripted FakeLLM, and the PLC,
       # plant and services run in-process on localhost.
       - run: uv run pytest -q

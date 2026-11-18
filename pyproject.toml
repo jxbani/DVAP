@@ -22,7 +22,7 @@ dependencies = [
 dvap = "bench.cli:main"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.33.0"]  # pinned: the build backend is a dependency too
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
