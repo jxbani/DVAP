@@ -12,12 +12,18 @@ It runs entirely offline on one laptop, with a local model.
 > DVAP is intentionally insecure. Run it only on a machine you control, keep every port on
 > `127.0.0.1`, and never connect it to real equipment. Read [docs/LAB_SAFETY.md](docs/LAB_SAFETY.md) first.
 
-<!-- TODO: record docs/media/demo.gif — a ticket injection overflowing the tank on the HMI (~15 s loop). -->
-![DVAP demo: a poisoned maintenance ticket overflows the tank](docs/media/demo.gif)
+<!-- TODO: record docs/media/demo.gif (a ticket injection overflowing the tank on the HMI, ~15 s
+     loop) and add it here: ![DVAP demo](docs/media/demo.gif) -->
 
 ## Quickstart
 
-Requirements: Docker with Compose v2, `make`, ~8 GB of free RAM and ~6 GB of disk for the model.
+Requirements:
+
+- Docker with Compose v2, with **at least 8 GB of memory allocated to Docker** (Docker Desktop:
+  Settings → Resources; on the WSL2 backend the limit is WSL's, set in `%UserProfile%\.wslconfig`).
+- ~6 GB of free disk for the model, and internet once, to download it.
+- `make` (optional: every target has a plain `docker compose` equivalent, below).
+- [`uv`](https://docs.astral.sh/uv/), only for `make test` and `make bench`.
 
 ```bash
 git clone https://github.com/jxbani/DVAP.git && cd DVAP && make up
@@ -27,12 +33,75 @@ make model    # one time: downloads the local LLM (~4.7 GB) — the only step th
 Then open the scoreboard at **http://127.0.0.1:8090**, pick a challenge, and watch the plant on the
 HMI at http://127.0.0.1:8080. The ticket form (a common attack vector) is at http://127.0.0.1:8081.
 
-| Command | What it does |
+The agent thinks on your CPU: expect tens of seconds per decision with the default 7B model (longer
+on a laptop). The HMI's **Agent activity** panel shows each step as it happens.
+
+| `make` | Without `make` | What it does |
+|---|---|---|
+| `make up` | `docker compose up -d --build` | Start the lab |
+| `make model` | `docker compose --profile setup run --rm ollama-pull` | Download the model (once) |
+| `make down` | `docker compose down` | Stop the lab (keeps all data) |
+| `make reset CH=C01` | `curl -X POST http://127.0.0.1:8090/api/challenges/C01/reset` | Reset one challenge in place |
+| `make reset` | `docker compose down`, then `docker volume rm dvap_historian-data dvap_cmms-data dvap_memory-data`, then `docker compose up -d --build` | Wipe all lab state and rebuild; keeps the model |
+| `make defend` / `make undefend` | see the `defend` recipe in the [Makefile](Makefile) | Turn SafeEnvelope on/off for the running challenge |
+| `make test` | `uv run pytest` | Run the tests (no model needed: they use a scripted fake LLM) |
+| `make bench` | `uv run dvap bench --models fake:comply,fake:refuse --runs 1 --guard off` | Benchmark models ([docs/BENCHMARK.md](docs/BENCHMARK.md)) |
+
+(The volume names assume the default project name, `dvap`, which comes from the `DVAP` folder.)
+
+## Playing
+
+Each challenge card on the scoreboard has a story, an objective and three hints; starting it resets
+the lab. Some attacks only need the browser (the ticket form). Others need a foothold **inside** the
+lab network, the way an insider or a compromised device would have one. Get it with
+`docker compose exec`:
+
+| To reach | Use | Example |
+|---|---|---|
+| PLC registers (Modbus/TCP) | `docker compose exec plc python` | `challenges/C01b/solution.md` |
+| The inter-agent bus | `docker compose exec bus redis-cli` | `challenges/C07/solution.md` |
+| The historian API | `docker compose exec hmi python` | `challenges/C08/solution.md` |
+
+The `solution.md` files are spoilers; the hints come first.
+
+**Try the defended mode.** After solving a challenge, start it again, run `make defend`, and repeat
+the attack: the HMI's **SafeEnvelope** panel shows each decision and the reason for it. Starting or
+resetting a challenge turns the guard off again; `make undefend` does it by hand.
+
+## Platform notes
+
+- **Windows:** use Docker Desktop with the WSL2 backend. Without `make`, use the commands in the
+  table above. Line endings are handled by `.gitattributes`, so a Windows checkout works.
+- **WSL2:** run everything from the WSL shell, ideally with the repo cloned inside the WSL filesystem
+  (much faster than `/mnt/c`).
+- **macOS (Apple Silicon or Intel):** all images are multi-arch. Docker on macOS can't use the GPU,
+  so the model runs on the CPU inside Docker's VM: give Docker plenty of memory and expect slow
+  decisions. A smaller model is faster (set `OLLAMA_MODEL` and `MODEL` in `.env`; check its licence).
+- **Linux:** works as is; `make` may need installing (`apt install make`).
+
+## Troubleshooting
+
+| Symptom | Fix |
 |---|---|
-| `make up` / `make down` | Start / stop the lab |
-| `make reset` | Wipe all lab state and rebuild (`make reset CH=C01` resets one challenge in place) |
-| `make test` | Run the test suite (no LLM needed — tests use a scripted fake model) |
-| `make bench` | Benchmark models against every challenge ([docs/BENCHMARK.md](docs/BENCHMARK.md)) |
+| The agent does nothing, or its log says the model isn't found | Run `make model` (once), then wait for the next cycle. |
+| `port is already allocated` on `make up` | Pick other host ports in `.env`: `HMI_PORT`, `CMMS_PORT`, `SCOREBOARD_PORT` (still bound to 127.0.0.1). |
+| Containers restart or are killed | Docker is out of memory: allocate at least 8 GB to Docker. |
+| The scoreboard header says "flags are disabled" | You set a `TEAM` for a CTF: also set a private `DVAP_FLAG_SECRET` (see [docs/INSTRUCTOR_GUIDE.md](docs/INSTRUCTOR_GUIDE.md)). |
+| Something looks stuck | `docker compose logs -f agent-operator mcp-plant`, and `make reset CH=<id>` to start the challenge over. |
+
+## Using a hosted model instead of Ollama
+
+Set `MODEL` (any LiteLLM id, e.g. `anthropic/<model>`) and the provider's key (`ANTHROPIC_API_KEY`,
+`OPENAI_API_KEY`) in `.env`. The lab has no internet access on purpose, so the agent also needs a
+network route out: add a `docker-compose.override.yml` that puts `agent-operator` on the `edge`
+network as well as `plant`. That gives anything running as the agent a way out of the lab too, so
+only do it on a disposable machine. See [docs/LAB_SAFETY.md](docs/LAB_SAFETY.md).
+
+## Cleaning up
+
+- `make down` stops the lab; `make reset` wipes the lab state but keeps the downloaded model.
+- `docker compose down -v` removes everything, including the 4.7 GB model volume.
+- Remove the images too with `docker compose down -v --rmi all`.
 
 ## Architecture
 
