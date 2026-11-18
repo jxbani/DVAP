@@ -53,6 +53,15 @@ def test_sandbox_is_hardened():
     assert sb.get("pids_limit") and sb.get("mem_limit")
 
 
+def test_scripts_copied_into_images_have_no_carriage_returns():
+    """A CRLF checkout (Windows, core.autocrlf) must not put \\r into Linux containers;
+    .gitattributes forces LF."""
+    scripts = list(Path("services").rglob("*.sh"))
+    assert scripts
+    for script in scripts:
+        assert b"\r" not in script.read_bytes(), f"{script} has CRLF line endings"
+
+
 def test_make_reset_keeps_the_downloaded_model():
     """`down -v` would delete the 4.7 GB model volume; reset removes an explicit allowlist instead,
     which must cover every other named volume (or a new one would silently survive resets)."""

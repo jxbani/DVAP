@@ -1,0 +1,9 @@
+# Check out text files with LF everywhere, including on Windows with core.autocrlf=true.
+# Shell scripts, the Dockerfile and configs are copied into Linux images, where a CRLF
+# checkout would carry carriage returns into the container (and break any non-trivial script).
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
