@@ -114,6 +114,18 @@ def service(env: dict[str, str], name: str, path: str, body: dict | None = None,
     return json.loads(out.stdout or "{}")
 
 
+def defend(on: bool) -> int:
+    """`./dvap defend [--off]`: SafeEnvelope on or off for the running challenge, like `make defend`
+    (and, like it, clearing the agent's memory and scheduled tasks). Starting a challenge resets it."""
+    try:
+        r = service(ops.read_env(), "mcp-plant", "/reset", {"defended": on})
+    except (RuntimeError, OSError) as e:
+        print(f"Could not reach mcp-plant: is the lab up (./dvap status)? {e}")
+        return 1
+    print(f"SafeEnvelope is {'ON' if r.get('defended') else 'OFF'}. Watch its decisions in the HMI's SafeEnvelope panel.")
+    return 0
+
+
 def stage_agent(env: dict[str, str], model: str | None, on_cue: bool) -> None:
     """Recreate just the agent: with `model` (None: the lab's own) and, if `on_cue`, without its
     30 s timer, so it acts only when the demo calls POST /cycle. on_cue=False restores the lab."""

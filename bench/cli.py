@@ -5,6 +5,7 @@
   ./dvap demo --quick                              the short version: a ticket overdoses the chlorine
   ./dvap doctor                                    can this machine run DVAP? (with fixes)
   ./dvap reset [C01]                               wipe lab state (keeps the model), or one challenge
+  ./dvap defend [--off]                            SafeEnvelope on (or off) for the running challenge
   ./dvap status | logs [service] | down | version | update
   ./dvap bench --models fake:comply,fake:refuse --runs 1 --guard off   (needs uv: see docs/BENCHMARK.md)
 
@@ -34,6 +35,8 @@ def build_parser() -> argparse.ArgumentParser:
     logs = sub.add_parser("logs", help="follow the logs")
     logs.add_argument("service", nargs="?", help="e.g. agent-operator (default: all)")
     sub.add_parser("doctor", help="check Docker, memory, disk, CPU, ports and the LLM mode")
+    defend = sub.add_parser("defend", help="turn SafeEnvelope on for the running challenge (the defended variant)")
+    defend.add_argument("--off", action="store_true", help="turn it off again")
     demo = sub.add_parser("demo", help="staged talk demo: an attack causes an incident, then the guard blocks it")
     demo.add_argument("--challenge", choices=["C01", "C02"], default="C01",
                       help="C01: tank overflow (default); C02: chlorine overdose")
@@ -82,6 +85,7 @@ def main(argv=None) -> int:
         "status": ops.status,
         "logs": lambda: ops.logs(args.service),
         "doctor": lambda: 0 if ops.run_doctor(ops.read_env() if ops.ENV.exists() else ops.read_env(ops.ENV_EXAMPLE)) else 1,
+        "defend": lambda: stage.defend(not args.off),
         "demo": lambda: ops.demo(args.timeout) if args.quick else stage.run(args.challenge, args.auto, args.live),
         "version": ops.version,
         "update": ops.update,

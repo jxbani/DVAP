@@ -71,4 +71,5 @@ nav:
       - Contributing: contributing.md
       - Authoring a challenge: CHALLENGE_AUTHORING.md
       - Releasing: RELEASING.md
+      - Beta testing: BETA_TESTING.md
       - Security policy: security.md

@@ -14,6 +14,9 @@ entries for the people running the lab. How to cut a release: [docs/RELEASING.md
 
 ### Added
 
+- The beta kit: a tester guide (docs/BETA_TESTING.md), a beta feedback issue form, and
+  `scripts/beta_report.py` to summarise the reports.
+- `./dvap defend [--off]`: SafeEnvelope on or off for the running challenge, without `make`.
 - A simulated water-treatment plant (plant-sim, 10 Hz, deterministic per seed) behind a virtual
   PLC speaking Modbus/TCP and OPC UA, with an HMI, historian, CMMS ticket system, Valkey message
   bus, maintenance-planner agent and a third-party vendor MCP server.

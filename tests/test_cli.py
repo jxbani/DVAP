@@ -406,3 +406,23 @@ def test_staged_demo_passes_only_on_incident_then_blocked(monkeypatch, envfiles,
     assert resets == [False, True]
     assert lab.calls[-1] == ("plant-sim", "/speed", {"speed": 1})
     assert staged == [("replay", True), (None, False)]  # replay on cue for the demo, then the lab's own agent
+
+
+def test_defend_toggles_the_guard_through_mcp_plant(monkeypatch, envfiles, capsys):
+    ops.load_env(interactive=False)
+    calls = []
+    monkeypatch.setattr(stage, "service", lambda env, name, path, body=None, timeout=60:
+                        calls.append((name, path, body)) or {"defended": body["defended"]})
+    assert cli.main(["defend"]) == 0 and "SafeEnvelope is ON" in capsys.readouterr().out
+    assert cli.main(["defend", "--off"]) == 0 and "SafeEnvelope is OFF" in capsys.readouterr().out
+    assert calls == [("mcp-plant", "/reset", {"defended": True}), ("mcp-plant", "/reset", {"defended": False})]
+
+
+def test_defend_reports_a_lab_that_is_down(monkeypatch, envfiles, capsys):
+    ops.load_env(interactive=False)
+
+    def down(*a, **k):
+        raise RuntimeError("no such service")
+
+    monkeypatch.setattr(stage, "service", down)
+    assert cli.main(["defend"]) == 1 and "is the lab up" in capsys.readouterr().out
