@@ -27,6 +27,8 @@ log = logging.getLogger("scoreboard")
 
 TEAM = os.environ.get("TEAM", "solo")
 FLAG_SECRET = os.environ.get("DVAP_FLAG_SECRET", "dvap-dev-secret")
+# Secrets anyone can read in this repo (the compose default and the .env.example placeholder).
+PUBLIC_SECRETS = {"dvap-dev-secret", "change-me", ""}
 CHALLENGES_DIR = os.environ.get("CHALLENGES_DIR", "challenges")
 REDIS_URL = os.environ.get("REDIS_URL", "redis://bus:6379")
 AGENT_URL = os.environ.get("AGENT_URL", "http://agent-operator:8000")  # for the C09 busy human
@@ -84,8 +86,16 @@ async def _watch() -> None:
             log.warning("checker failed for %s", cid, exc_info=True)
 
 
+def flags_disabled() -> str | None:
+    """Fail closed: a team (anything but solo practice) signing flags with a public secret would let
+    anyone mint a valid flag for any team. Returns the reason flags are off, or None if they are on."""
+    if TEAM != "solo" and FLAG_SECRET in PUBLIC_SECRETS:
+        return "flags are disabled: set DVAP_FLAG_SECRET to a private value (the current one is public)"
+    return None
+
+
 def _mark_solved(cid: str) -> None:
-    status[cid] = {"solved": True, "flag": make_flag(FLAG_SECRET, TEAM, cid)}
+    status[cid] = {"solved": True, "flag": None if flags_disabled() else make_flag(FLAG_SECRET, TEAM, cid)}
 
 
 def is_routine(summary: str) -> bool:
@@ -109,6 +119,8 @@ async def _busy_human() -> None:
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
+    if reason := flags_disabled():
+        log.warning("team %s: %s", TEAM, reason)
     tasks = [asyncio.create_task(checker.run()), asyncio.create_task(_watch()), asyncio.create_task(_busy_human())]
     try:
         yield
@@ -133,7 +145,7 @@ def _public(cid: str) -> dict:
 
 @app.get("/health")
 async def health() -> dict:
-    return {"status": "ok", "team": TEAM, "challenges": len(CHALLENGES)}
+    return {"status": "ok", "team": TEAM, "challenges": len(CHALLENGES), "flags_disabled": flags_disabled()}
 
 
 @app.get("/")
@@ -143,7 +155,8 @@ def index() -> FileResponse:
 
 @app.get("/api/challenges")
 async def challenges() -> dict:
-    return {"team": TEAM, "active": active, "challenges": [_public(cid) for cid in CHALLENGES]}
+    return {"team": TEAM, "active": active, "flags_disabled": flags_disabled(),
+            "challenges": [_public(cid) for cid in CHALLENGES]}
 
 
 @app.post("/api/challenges/{cid}/start")
@@ -172,6 +185,8 @@ class FlagIn(BaseModel):
 @app.post("/api/flag")
 async def submit_flag(body: FlagIn) -> dict:
     """Verify a pasted flag and mark that challenge solved (for a central CTF board)."""
+    if reason := flags_disabled():
+        return {"ok": False, "reason": reason}
     cid = verify_flag(FLAG_SECRET, TEAM, body.flag)
     if cid is None or cid not in CHALLENGES:
         return {"ok": False, "reason": "invalid flag for this team"}

@@ -115,7 +115,7 @@
 
     async function load() {
       const data = await (await fetch("/api/challenges")).json();
-      $("team").textContent = `team ${data.team}`;
+      $("team").textContent = data.flags_disabled ? `team ${data.team} · ${data.flags_disabled}` : `team ${data.team}`;
       const solved = data.challenges.filter((c) => c.solved).length;
       $("progress").textContent = `${solved} / ${data.challenges.length} solved${data.active ? ` · active: ${data.active}` : ""}`;
       const board = $("board");

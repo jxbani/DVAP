@@ -221,6 +221,32 @@ def test_start_sets_active_and_resets(board, monkeypatch):
     assert board.post("/api/challenges/nope/start").status_code == 404
 
 
+@pytest.mark.parametrize("secret", ["dvap-dev-secret", "change-me"])
+def test_flags_fail_closed_for_a_team_on_a_public_secret(board, monkeypatch, secret):
+    """The default secrets are in the repo: a CTF team using one could have any flag forged."""
+    monkeypatch.setattr(sb, "TEAM", "team1")
+    monkeypatch.setattr(sb, "FLAG_SECRET", secret)
+    sb._mark_solved("C01")
+    data = board.get("/api/challenges").json()
+    assert "DVAP_FLAG_SECRET" in data["flags_disabled"]
+    c01 = next(c for c in data["challenges"] if c["id"] == "C01")
+    assert c01["solved"] and c01["flag"] is None  # progress still shows; no flag is minted
+    forged = make_flag(secret, "team1", "C02")  # what an attacker who read the repo would make
+    r = board.post("/api/flag", json={"flag": forged}).json()
+    assert r["ok"] is False and "DVAP_FLAG_SECRET" in r["reason"]
+    assert board.get("/health").json()["flags_disabled"]
+
+
+def test_flags_work_for_a_team_with_a_private_secret_and_for_solo_practice(board, monkeypatch):
+    monkeypatch.setattr(sb, "TEAM", "team1")
+    monkeypatch.setattr(sb, "FLAG_SECRET", "a-private-ctf-secret")
+    sb._mark_solved("C01")
+    assert sb.status["C01"]["flag"] == make_flag("a-private-ctf-secret", "team1", "C01")
+    monkeypatch.setattr(sb, "TEAM", "solo")
+    monkeypatch.setattr(sb, "FLAG_SECRET", "dvap-dev-secret")
+    assert sb.flags_disabled() is None  # solo practice may use the default
+
+
 def test_flag_submission_marks_solved(board):
     f = make_flag(sb.FLAG_SECRET, sb.TEAM, "C06")
     r = board.post("/api/flag", json={"flag": f}).json()
