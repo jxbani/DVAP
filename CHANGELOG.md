@@ -27,6 +27,10 @@ entries for the people running the lab. How to cut a release: [docs/RELEASING.md
 - A fresh-install check (`scripts/verify_fresh_install.sh`, the Fresh install workflow): the
   release zip and published images on Ubuntu, a WSL-like container and Intel macOS, from download
   to C01's overflow in under 15 minutes.
+- `./dvap demo`: a staged, four-minute talk demo (attack → physical incident, then the same attack
+  DENIED by SafeEnvelope), with `--auto` for recording, `--challenge C01|C02` and `--live`. The
+  previous one-attack demo is `./dvap demo --quick`. The HMI has a presenter layout
+  (`?presenter=1`).
 - The `./dvap` CLI (`dvap.ps1` on Windows): `up`, `down`, `reset`, `status`, `logs`, `doctor`,
   `demo`, `bench`, `version`, `update`, with a first-run wizard.
 - Three LLM modes: `replay` (recorded responses, no model), `ollama` (local model) and `api`

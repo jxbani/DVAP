@@ -93,7 +93,13 @@ jobs:
         run: docker compose up -d --wait --wait-timeout 300
       - run: python3 scripts/smoke_test.py
       - name: Live attack against the running lab (C02 via the ticket form, replay agent)
-        run: ./dvap demo --timeout 120
+        run: ./dvap demo --quick --timeout 120
+      # The talk demo, as it runs on stage: exits non-zero unless the attack causes the incident
+      # with the guard off and is DENIED, with no incident, with the guard on.
+      - name: Staged demo, C01 (overflow, then blocked)
+        run: ./dvap demo --auto --challenge C01
+      - name: Staged demo, C02 (overdose, then blocked)
+        run: ./dvap demo --auto --challenge C02
       - run: ./dvap status
       - if: failure()
         run: docker compose logs --tail 100
