@@ -79,7 +79,7 @@ jobs:
     name: macos-15-intel (colima)
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: macos-15-intel
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -97,6 +97,9 @@ jobs:
         env:
           # colima shares only $HOME with its VM; mktemp's /var/folders isn't, so bind mounts fail.
           WORK_DIR: ${{ runner.temp }}/fresh
+          # Pulling into colima on this runner alone takes ~19 min (not what a Mac user sees);
+          # the other jobs keep the 15-minute budget.
+          BUDGET_SECONDS: "2700"
 
   macos-latest:
     # macos-latest is Apple Silicon, and GitHub's Apple Silicon runners have no nested
