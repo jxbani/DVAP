@@ -10,7 +10,7 @@ type: software
 repository-code: "https://github.com/jxbani/DVAP"
 authors:
   - name: "The DVAP Authors"
-version: 1.0.0
+version: 1.0.1
 date-released: 2026-11-19
 license: Apache-2.0
 keywords:

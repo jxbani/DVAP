@@ -10,6 +10,14 @@ entries for the people running the lab. How to cut a release: [docs/RELEASING.md
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-19
+
+### Fixed
+
+- `./dvap up` no longer fails on slow machines (an older laptop, a Raspberry Pi, a busy VM) with
+  "container is unhealthy". Health checks now allow 2 minutes to start and 10 s per check, and
+  `./dvap up` waits up to 10 minutes. On a normal machine startup takes as long as before.
+
 ## [1.0.0] - 2026-11-19
 
 The first release. (A 0.9.0-beta.1 pre-release was prepared but never published, so its changes
@@ -61,5 +69,6 @@ are all here; the external beta it was for has not run yet.)
 - Every image and GitHub Action is pinned by digest or commit SHA, and Python dependencies by
   `uv.lock`; CI fails on any fixable CRITICAL vulnerability in DVAP's images.
 
-[Unreleased]: https://github.com/jxbani/DVAP/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/jxbani/DVAP/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/jxbani/DVAP/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/jxbani/DVAP/releases/tag/v1.0.0

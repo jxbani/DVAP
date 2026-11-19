@@ -123,6 +123,25 @@ def test_github_actions_are_pinned_to_commits():
                         assert step.get("with", {}).get("version"), f"{wf.name}: setup-uv without a uv version"
 
 
+def seconds(duration: str) -> float:
+    return float(duration.removesuffix("s"))
+
+
+def test_health_checks_give_slow_machines_time_to_start():
+    """With no start period, a slow machine (old laptop, Raspberry Pi, busy VM) failed `./dvap up`:
+    a service had ~25 s to answer, and each 3 s check started a Python interpreter. Measured with
+    every container at 0.1 CPU: unhealthy after 64 s before, all healthy after 228 s now."""
+    for name, svc in SERVICES.items():
+        check = svc.get("healthcheck")
+        if check is None:
+            continue
+        assert seconds(check["start_period"]) >= 120, name
+        assert seconds(check["timeout"]) >= 10, name
+    from bench import ops
+
+    assert '"--wait-timeout", "600"' in Path(ops.__file__).read_text(encoding="utf-8")  # `./dvap up` waits long enough
+
+
 def test_make_reset_keeps_the_downloaded_model():
     """`down -v` would delete the 4.7 GB model volume; reset removes an explicit allowlist instead,
     which must cover every other named volume (or a new one would silently survive resets)."""
