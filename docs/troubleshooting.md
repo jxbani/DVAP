@@ -11,8 +11,8 @@ ports, the LLM mode and (on WSL) where the repository lives. It prints PASS, WAR
 check, with the exact fix under anything that isn't PASS, and exits non-zero on any FAIL. `./dvap up`
 runs the same checks first and stops on a failure.
 
-Below are the 15 problems people hit most, each with the doctor output that identifies it. Only the
-relevant rows are shown; the real output lists every check.
+Below are the 16 problems people hit most, most of them with the doctor output that identifies it.
+Only the relevant rows are shown; the real output lists every check.
 
 ## 1. Docker isn't installed
 
@@ -191,6 +191,21 @@ Look at what the agent is doing:
   tens of seconds per decision. The HMI's **Agent activity** panel shows each step as it happens.
 - **Errors about the model:** in `ollama` mode, `./dvap up` re-checks the model. In `api` mode,
   check the key and that the model id is one your provider serves.
+
+## 16. `./dvap up`: the gateway fails with "not a directory"
+
+Doctor passes, but `./dvap up` stops while starting the gateway, with an error that mentions
+`gateway/nginx.conf` and ends in `not a directory`.
+
+The DVAP folder isn't shared with Docker's VM, so Docker can't see the gateway's config file.
+That happens when DVAP lives outside the folders your Docker setup shares:
+
+- **colima** (and Rancher Desktop, Lima) shares only your home folder. Move DVAP under it, e.g.
+  `~/DVAP`, not `/tmp` or `/var/folders/...`.
+- **Docker Desktop** shares `/Users`, `/Volumes`, `/private`, `/tmp` and `/var/folders` by
+  default. If you changed that, add the DVAP folder under **Settings → Resources → File sharing**.
+
+Then run `./dvap down` and `./dvap up` again.
 
 ## FAQ
 

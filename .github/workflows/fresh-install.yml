@@ -94,6 +94,9 @@ jobs:
           colima start --cpu 3 --memory 8 --disk 40
           docker version
       - run: bash scripts/verify_fresh_install.sh
+        env:
+          # colima shares only $HOME with its VM; mktemp's /var/folders isn't, so bind mounts fail.
+          WORK_DIR: ${{ runner.temp }}/fresh
 
   macos-latest:
     # macos-latest is Apple Silicon, and GitHub's Apple Silicon runners have no nested
