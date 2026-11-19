@@ -220,7 +220,8 @@ def up(mode: str | None = None, build: bool = False, skip_checks: bool = False) 
             return 1
         print("Prebuilt images unavailable (offline, or not published for this version): building locally.")
         build = True
-    run(compose_cmd(env, "up", "-d", "--wait", "--wait-timeout", "300", *(["--build"] if build else []), build=build))
+    # Up to 10 minutes: services start in dependency order, and a slow machine needs every minute of it.
+    run(compose_cmd(env, "up", "-d", "--wait", "--wait-timeout", "600", *(["--build"] if build else []), build=build))
     print("\nDVAP is up:")
     for name, url in urls(env).items():
         print(f"  {name:<12} {url}")

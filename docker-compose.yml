@@ -5,15 +5,19 @@
 # Only the `gateway` publishes ports (HMI with its guard panel, CMMS ticket form, scoreboard), and
 # only on 127.0.0.1. tests/test_lab_safety.py enforces these rules.
 
+# Health checks give a slow machine time to start (an old laptop, a Raspberry Pi, a busy VM):
+# failures during start_period don't count, and the first passing check marks the service healthy
+# at once, so a fast machine waits no longer. tests/test_lab_safety.py keeps every check this tolerant.
 x-healthcheck: &healthcheck
   test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
   interval: 5s
-  timeout: 3s
+  timeout: 10s
   retries: 5
+  start_period: 120s
 
 services:
   plant-sim:
-    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-plant-sim:${DVAP_VERSION:-1.0.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-plant-sim:${DVAP_VERSION:-1.0.1}
     environment:
       PLANT_SEED: ${PLANT_SEED:-0}
       PLANT_NOISE: ${PLANT_NOISE:-0}
@@ -21,7 +25,7 @@ services:
     healthcheck: *healthcheck
 
   plc:
-    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-plc:${DVAP_VERSION:-1.0.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-plc:${DVAP_VERSION:-1.0.1}
     environment:
       PLANT_URL: http://plant-sim:8000
       PLC_DIFFICULTY: ${PLC_DIFFICULTY:-easy} # easy | medium | hard
@@ -31,7 +35,7 @@ services:
     healthcheck: *healthcheck
 
   historian:
-    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-historian:${DVAP_VERSION:-1.0.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-historian:${DVAP_VERSION:-1.0.1}
     environment:
       PLC_HOST: plc
       HISTORIAN_DB: /data/historian.sqlite
@@ -51,12 +55,13 @@ services:
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
-      timeout: 3s
+      timeout: 10s
       retries: 5
+      start_period: 120s
 
   # Maintenance tickets. No authentication (DVAP-VULN: C01): this is where participants inject text.
   cmms:
-    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-cmms:${DVAP_VERSION:-1.0.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-cmms:${DVAP_VERSION:-1.0.1}
     environment:
       CMMS_DB: /data/cmms.sqlite
     volumes: [cmms-data:/data]
@@ -64,7 +69,7 @@ services:
     healthcheck: *healthcheck
 
   hmi:
-    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-hmi:${DVAP_VERSION:-1.0.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-hmi:${DVAP_VERSION:-1.0.1}
     environment:
       PLANT_URL: http://plant-sim:8000
       HISTORIAN_URL: http://historian:8000
@@ -78,7 +83,7 @@ services:
   # Challenge engine, reset, flags and scoring UI. Reads challenges/ (bind-mounted so authors
   # can edit without a rebuild) and resets every service per challenge.
   scoreboard:
-    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-scoreboard:${DVAP_VERSION:-1.0.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-scoreboard:${DVAP_VERSION:-1.0.1}
     environment:
       TEAM: ${TEAM:-solo}
       DVAP_FLAG_SECRET: ${DVAP_FLAG_SECRET:-dvap-dev-secret}
@@ -118,14 +123,15 @@ services:
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8090/health"]
       interval: 5s
-      timeout: 3s
+      timeout: 10s
       retries: 5
+      start_period: 120s
 
   # Diagnostic sandbox. The blast radius for run_diagnostic command injection (C05).
   # On the internal `plant` network (no `edge`, so no internet): confined to the lab, but a
   # shell inside it can reach the PLC over Modbus, which is the point of the C05 challenge.
   sandbox:
-    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-sandbox:${DVAP_VERSION:-1.0.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-sandbox:${DVAP_VERSION:-1.0.1}
     networks: [plant]
     # Hardened: it runs attacker-controlled shell commands (C05). See docs/LAB_SAFETY.md.
     user: "65534:65534" # nobody
@@ -140,17 +146,13 @@ services:
   # Third-party MCP server for demand forecasting (DVAP-VULN: C04). Its tool description is a
   # poisoned, rug-pulling instruction channel. Internal network only.
   vendor-analytics:
-    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-vendor-analytics:${DVAP_VERSION:-1.0.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-vendor-analytics:${DVAP_VERSION:-1.0.1}
     networks: [plant]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+    healthcheck: *healthcheck
 
   # MCP server: the only way the agent touches the plant. Internal network only.
   mcp-plant:
-    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-mcp-plant:${DVAP_VERSION:-1.0.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-mcp-plant:${DVAP_VERSION:-1.0.1}
     environment:
       PLC_HOST: plc
       CMMS_URL: http://cmms:8000
@@ -167,15 +169,11 @@ services:
       sandbox: { condition: service_healthy }
       bus: { condition: service_healthy }
     networks: [plant]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+    healthcheck: *healthcheck
 
   # The victim LLM agent. Talks to the plant only through mcp-plant.
   agent-operator:
-    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-agent-operator:${DVAP_VERSION:-1.0.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-agent-operator:${DVAP_VERSION:-1.0.1}
     environment:
       MCP_URL: http://mcp-plant:8000/mcp
       VENDOR_MCP_URL: http://vendor-analytics:8000/mcp # third-party server (C04)
@@ -196,7 +194,7 @@ services:
 
   # Second agent: issues work orders to the operator over the unauthenticated Redis bus (C07).
   maintenance-planner:
-    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-maintenance-planner:${DVAP_VERSION:-1.0.0}
+    image: ${DVAP_REGISTRY:-ghcr.io/jxbani}/dvap-maintenance-planner:${DVAP_VERSION:-1.0.1}
     environment:
       REDIS_URL: redis://bus:6379
     depends_on:
@@ -216,8 +214,9 @@ services:
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 10s
-      timeout: 5s
+      timeout: 10s
       retries: 5
+      start_period: 120s
     # deploy:
     #   resources:
     #     reservations:
