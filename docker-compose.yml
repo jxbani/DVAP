@@ -49,7 +49,7 @@ services:
   # Valkey: the BSD-licensed, Redis-compatible fork (Redis 7.4+ is RSAL/SSPL). Same protocol and
   # tools (redis-cli works), so the lab and its challenges still speak "Redis".
   bus:
-    image: valkey/valkey:9.1.3-alpine@sha256:bf09d58e96d6b4524a15396b65b242bbe18beebbcc15a04d8ee75ddac62fae0b
+    image: valkey/valkey:9.2.0-alpine@sha256:c8e2d17498838af5d91e12eb7c11220b3434a7b7131a333e3af52ad5e0b80882
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     networks: [plant]
     healthcheck:
